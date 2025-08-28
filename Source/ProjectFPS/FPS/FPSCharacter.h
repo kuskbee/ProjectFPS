@@ -13,6 +13,8 @@ class UCharacterAttributeSet;
 class UGameplayAbility;
 class UInputMappingContext;
 class UInputAction;
+class UCameraComponent;
+class USpringArmComponent;
 
 UCLASS()
 class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInterface
@@ -22,7 +24,8 @@ class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInt
 public:
 	// Sets default values for this character's properties
 	AFPSCharacter();
-	// IAbilitySystemInterface¸¦ ±¸ÇöÇÏ±â À§ÇÑ ÇÊ¼ö ÇÔ¼ö
+	
+	// IAbilitySystemInterfaceë¥¼ êµ¬í˜„í•˜ê¸° ìœ„í•´ í•„ìš”í•œ í•¨ìˆ˜
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 protected:
@@ -36,7 +39,10 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	// Input Action handler functions
 	void FireAbilityPressed(const FInputActionValue& Value);
+	void Move(const FInputActionValue& Value);
+	void Look(const FInputActionValue& Value);
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
@@ -44,15 +50,36 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UCharacterAttributeSet> AttributeSet;
+
+	// Spring arm for the camera
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	TObjectPtr<USpringArmComponent> CameraBoom;
+
+	// First person camera
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	TObjectPtr<UCameraComponent> FollowCamera;
+
 public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TSubclassOf<UGameplayAbility> FireAbility;
 
+	// Input
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputMappingContext> MouseLookMappingContext;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> FireAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> LookAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> JumpAction;
 };

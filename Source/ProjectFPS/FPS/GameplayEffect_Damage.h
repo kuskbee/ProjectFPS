@@ -13,5 +13,7 @@ UCLASS()
 class PROJECTFPS_API UGameplayEffect_Damage : public UGameplayEffect
 {
 	GENERATED_BODY()
+public:
+	UGameplayEffect_Damage();
 	
 };

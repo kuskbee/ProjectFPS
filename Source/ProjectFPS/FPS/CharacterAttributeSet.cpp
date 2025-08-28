@@ -7,6 +7,18 @@
 
 UCharacterAttributeSet::UCharacterAttributeSet()
 {
+	// Default values for Attributes
+	Health.SetBaseValue(100.0f);
+	Health.SetCurrentValue(100.0f);
+	MaxHealth.SetBaseValue(100.0f);
+
+	Mana.SetBaseValue(100.0f);
+	Mana.SetCurrentValue(100.0f);
+	MaxMana.SetBaseValue(100.0f);
+
+	Stamina.SetBaseValue(100.0f);
+	Stamina.SetCurrentValue(100.0f);
+	MaxStamina.SetBaseValue(100.0f);
 }
 
 void UCharacterAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
