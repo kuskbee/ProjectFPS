@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "InputActionValue.h"
+#include "GameplayEffectTypes.h" // Added for FOnAttributeChangeData
 #include "FPSCharacter.generated.h"
 
 class UAbilitySystemComponent;
@@ -31,6 +32,9 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+
+	// Called when Health attribute is changed
+	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
 
 public:
 	// Called every frame
