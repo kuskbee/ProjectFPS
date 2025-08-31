@@ -9,6 +9,7 @@
 #include "GameplayEffectTypes.h" // Added for FOnAttributeChangeData
 #include "FPSCharacter.generated.h"
 
+class USkeletalMeshComponent;
 class UAbilitySystemComponent;
 class UCharacterAttributeSet;
 class UGameplayAbility;
@@ -49,19 +50,20 @@ public:
 	void Look(const FInputActionValue& Value);
 
 protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category= "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> FirstPersonMesh;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
 	UPROPERTY()
 	TObjectPtr<UCharacterAttributeSet> AttributeSet;
 
-	// Spring arm for the camera
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-	TObjectPtr<USpringArmComponent> CameraBoom;
+	
 
 	// First person camera
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-	TObjectPtr<UCameraComponent> FollowCamera;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> FirstPersonCameraComponent;
 
 public:
 
