@@ -10,7 +10,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/Engine.h"
-
+#include "GameFramework/GameModeBase.h" // AGameModeBase를 위해 추가
+#include "FPS/FPSGameModeBase.h" // 우리 게임모드를 위해 추가
 
 // Sets default values
 AFPSCharacter::AFPSCharacter()
@@ -127,14 +128,65 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 void AFPSCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
+	// 디버그 메시지 출력
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(
 			-1, 
 			5.f, 
 			FColor::Red, 
-			FString::Printf(TEXT("Health is now: %f"), Data.NewValue)
+			FString::Printf(TEXT("현재 체력: %f"), Data.NewValue)
 		);
+	}
+
+	// 체력이 0 이하가 되면 사망 처리
+	if (Data.NewValue <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("캐릭터 사망!"));
+
+		// 입력 비활성화
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			DisableInput(PC);
+		}
+		
+		// 움직임 정지
+		GetCharacterMovement()->StopMovementImmediately();
+
+		// 메시 숨기기 (임시 사망 처리)
+		GetMesh()->SetVisibility(false);
+		if (FirstPersonMesh) // FirstPersonMesh가 유효한지 확인
+		{
+			FirstPersonMesh->SetVisibility(false);
+		}
+
+		// 캡슐 컴포넌트 충돌 비활성화
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		// 플레이어 캐릭터인 경우 GameMode에 사망 알림
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			ServerNotifyPlayerDeath();
+		}
+		else // AI 또는 조종되지 않는 캐릭터인 경우
+		{
+			Destroy(); // 즉시 파괴
+		}
+	}
+}
+
+void AFPSCharacter::ServerNotifyPlayerDeath_Implementation()
+{
+	// 서버에서만 실행됨
+	if (HasAuthority())
+	{
+		if (AGameModeBase* GameMode = GetWorld()->GetAuthGameMode())
+		{
+			if (AFPSGameModeBase* FPSGameMode = Cast<AFPSGameModeBase>(GameMode))
+			{
+				FPSGameMode->PlayerDied(GetController());
+			}
+		}
 	}
 }
 

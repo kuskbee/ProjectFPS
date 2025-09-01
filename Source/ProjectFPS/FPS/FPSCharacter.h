@@ -37,6 +37,10 @@ protected:
 	// Called when Health attribute is changed
 	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
 
+	UFUNCTION(Server, Reliable)
+	void ServerNotifyPlayerDeath();
+	void ServerNotifyPlayerDeath_Implementation();
+
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -59,11 +63,11 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UCharacterAttributeSet> AttributeSet;
 
-	
-
 	// First person camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> FirstPersonCameraComponent;
+
+	FTimerHandle RespawnTimerHandle;
 
 public:
 
