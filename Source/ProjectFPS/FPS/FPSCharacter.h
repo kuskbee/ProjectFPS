@@ -41,6 +41,9 @@ protected:
 	void ServerNotifyPlayerDeath();
 	void ServerNotifyPlayerDeath_Implementation();
 
+	// 플레이어 사망 처리
+	virtual void OnPlayerDeath();
+
 public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;

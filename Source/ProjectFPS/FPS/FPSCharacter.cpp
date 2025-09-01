@@ -142,36 +142,7 @@ void AFPSCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
 	// 체력이 0 이하가 되면 사망 처리
 	if (Data.NewValue <= 0.0f)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("캐릭터 사망!"));
-
-		// 입력 비활성화
-		if (APlayerController* PC = Cast<APlayerController>(GetController()))
-		{
-			DisableInput(PC);
-		}
-		
-		// 움직임 정지
-		GetCharacterMovement()->StopMovementImmediately();
-
-		// 메시 숨기기 (임시 사망 처리)
-		GetMesh()->SetVisibility(false);
-		if (FirstPersonMesh) // FirstPersonMesh가 유효한지 확인
-		{
-			FirstPersonMesh->SetVisibility(false);
-		}
-
-		// 캡슐 컴포넌트 충돌 비활성화
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-
-		// 플레이어 캐릭터인 경우 GameMode에 사망 알림
-		if (APlayerController* PC = Cast<APlayerController>(GetController()))
-		{
-			ServerNotifyPlayerDeath();
-		}
-		else // AI 또는 조종되지 않는 캐릭터인 경우
-		{
-			Destroy(); // 즉시 파괴
-		}
+		OnPlayerDeath();
 	}
 }
 
@@ -187,6 +158,40 @@ void AFPSCharacter::ServerNotifyPlayerDeath_Implementation()
 				FPSGameMode->PlayerDied(GetController());
 			}
 		}
+	}
+}
+
+void AFPSCharacter::OnPlayerDeath()
+{
+	UE_LOG(LogTemp, Warning, TEXT("캐릭터 사망!"));
+
+	// 입력 비활성화
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		DisableInput(PC);
+	}
+	
+	// 움직임 정지
+	GetCharacterMovement()->StopMovementImmediately();
+
+	// 메시 숨기기
+	GetMesh()->SetVisibility(false);
+	if (FirstPersonMesh)
+	{
+		FirstPersonMesh->SetVisibility(false);
+	}
+
+	// 캡슐 컴포넌트 충돌 비활성화
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 플레이어 캐릭터인 경우 GameMode에 사망 알림
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		ServerNotifyPlayerDeath();
+	}
+	else // AI 또는 조종되지 않는 캐릭터인 경우
+	{
+		Destroy(); // 즉시 파괴
 	}
 }
 
