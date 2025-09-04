@@ -2,12 +2,12 @@
 
 #include "FPS/AI/FPSEnemyAIController.h"
 #include "FPS/AI/FPSEnemyCharacter.h"
-#include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
-#include "Engine/World.h"
-#include "GameFramework/Pawn.h"
 #include "Engine/Engine.h"
 #include "TimerManager.h"
+#include "NavigationSystem.h"
+#include "AITypes.h"
+#include "Navigation/PathFollowingComponent.h"
 
 AFPSEnemyAIController::AFPSEnemyAIController()
 {
@@ -16,6 +16,13 @@ AFPSEnemyAIController::AFPSEnemyAIController()
 	// AI 기본 설정
 	bWantsPlayerState = false;
 	bSkipExtraLOSChecks = false;
+	
+	// AI 이동을 위한 설정
+	bAllowStrafe = false;
+	bSetControlRotationFromPawnOrientation = false;
+	
+	// AI 애니메이션을 위한 설정
+	bWantsPlayerState = false;
 }
 
 void AFPSEnemyAIController::BeginPlay()
@@ -46,7 +53,7 @@ void AFPSEnemyAIController::OnPossess(APawn* InPawn)
 	
 	if (ControlledEnemy)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("AI Controller가 적 캐릭터를 빙의했습니다!"));
+		UE_LOG(LogTemp, Log, TEXT("AI Controller 빙의 완료"));
 	}
 }
 
@@ -221,24 +228,30 @@ void AFPSEnemyAIController::StartChasing()
 	if (!TargetPawn || !ControlledEnemy)
 		return;
 
-	// AI 이동 명령
-	MoveToLocation(TargetPawn->GetActorLocation(), 50.0f);
+	FVector TargetLocation = TargetPawn->GetActorLocation();
+	FVector MyLocation = ControlledEnemy->GetActorLocation();
+	float Distance = FVector::Dist(MyLocation, TargetLocation);
+
+
+	// FAIMoveRequest 방식으로 이동
+	FAIMoveRequest MoveRequest;
+	MoveRequest.SetGoalLocation(TargetLocation);
+	MoveRequest.SetAcceptanceRadius(100.0f);
+	MoveRequest.SetCanStrafe(false);
+	MoveRequest.SetAllowPartialPath(true);
+	
+	MoveTo(MoveRequest);
 }
 
 void AFPSEnemyAIController::StartAttacking()
 {
-	// 현재는 로그만 출력 (나중에 무기 시스템 연동)
+	// 화면에 공격 상태 표시
 	if (GEngine)
 	{
-		GEngine->AddOnScreenDebugMessage(
-			-1, 
-			0.5f, 
-			FColor::Red, 
-			TEXT("적이 공격 중!")
-		);
+		GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Red, TEXT("적 공격중!"));
 	}
 	
-	// 플레이어 쪽으로 회전
+	// 플레이어 방향으로 회전
 	if (TargetPawn && ControlledEnemy)
 	{
 		FVector LookDirection = (TargetPawn->GetActorLocation() - ControlledEnemy->GetActorLocation()).GetSafeNormal();
@@ -249,7 +262,7 @@ void AFPSEnemyAIController::StartAttacking()
 
 void AFPSEnemyAIController::StopAttacking()
 {
-	// 공격 중단 로직 (나중에 무기 시스템 연동)
+	// TODO: 무기 시스템 연동 시 구현
 }
 
 // 상태 변경

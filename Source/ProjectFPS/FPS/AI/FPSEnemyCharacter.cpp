@@ -12,7 +12,18 @@ AFPSEnemyCharacter::AFPSEnemyCharacter()
 
 	// AI 캐릭터 설정
 	bUseControllerRotationYaw = false;
-	GetCharacterMovement()->bOrientRotationToMovement = true;
+	
+	// Character Movement 설정
+	UCharacterMovementComponent* CharMovement = GetCharacterMovement();
+	CharMovement->bOrientRotationToMovement = true;
+	CharMovement->bUseControllerDesiredRotation = false;
+	CharMovement->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
+	CharMovement->MaxWalkSpeed = 400.0f;
+	CharMovement->MaxAcceleration = 1000.0f;
+	CharMovement->BrakingDecelerationWalking = 1000.0f;
+	
+	// AI 애니메이션을 위한 설정
+	CharMovement->bRequestedMoveUseAcceleration = true;
 	
 	// AI Controller 클래스 설정
 	AIControllerClass = AFPSEnemyAIController::StaticClass();
