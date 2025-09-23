@@ -2,6 +2,7 @@
 
 #include "FPS/FPSCharacter.h"
 #include "FPS/CharacterAttributeSet.h"
+#include "FPS/Weapons/FPSWeapon.h"
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -12,6 +13,10 @@
 #include "Engine/Engine.h"
 #include "GameFramework/GameModeBase.h" // AGameModeBase를 위해 추가
 #include "FPS/FPSGameModeBase.h" // 우리 게임모드를 위해 추가
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Engine/World.h"
+#include "DrawDebugHelpers.h"
 
 // Sets default values
 AFPSCharacter::AFPSCharacter()
@@ -96,6 +101,9 @@ void AFPSCharacter::BeginPlay()
 			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(FireAbility, 1, 0, this));
 		}
 	}
+
+	//:TEST:
+	GiveDefaultWeapon();
 }
 
 // Called every frame
@@ -200,9 +208,23 @@ void AFPSCharacter::FireAbilityPressed(const FInputActionValue& Value)
 	const bool bPressed = Value.Get<bool>();
 	if (bPressed)
 	{
-		if (AbilitySystemComponent && FireAbility)
+		// Use weapon system if we have a current weapon
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->StartFiring();
+		}
+		// Fallback to old direct ability activation for backward compatibility
+		else if (AbilitySystemComponent && FireAbility)
 		{
 			AbilitySystemComponent->TryActivateAbilityByClass(FireAbility);
+		}
+	}
+	else
+	{
+		// Stop firing when button is released
+		if (CurrentWeapon)
+		{
+			CurrentWeapon->StopFiring();
 		}
 	}
 }
@@ -230,5 +252,217 @@ void AFPSCharacter::Look(const FInputActionValue& Value)
 		// add yaw and pitch input to controller
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
+	}
+}
+
+// ========================================
+// IFPSWeaponHolder Interface Implementation
+// ========================================
+
+void AFPSCharacter::AttachWeaponMeshes(AFPSWeapon* Weapon)
+{
+	if (!Weapon)
+	{
+		return;
+	}
+
+	// Attach first person weapon mesh to first person character mesh
+	if (USkeletalMeshComponent* WeaponFirstPersonMesh = Weapon->GetFirstPersonMesh())
+	{
+		WeaponFirstPersonMesh->AttachToComponent(
+			FirstPersonMesh,
+			FAttachmentTransformRules::KeepRelativeTransform,
+			FirstPersonWeaponSocket
+		);
+	}
+
+	// Attach third person weapon mesh to third person character mesh
+	if (USkeletalMeshComponent* WeaponThirdPersonMesh = Weapon->GetThirdPersonMesh())
+	{
+		WeaponThirdPersonMesh->AttachToComponent(
+			GetMesh(),
+			FAttachmentTransformRules::KeepRelativeTransform,
+			ThirdPersonWeaponSocket
+		);
+	}
+}
+
+void AFPSCharacter::PlayFiringMontage(UAnimMontage* Montage)
+{
+	if (!Montage)
+	{
+		return;
+	}
+
+	// Play montage on first person mesh
+	if (FirstPersonMesh && FirstPersonMesh->GetAnimInstance())
+	{
+		FirstPersonMesh->GetAnimInstance()->Montage_Play(Montage);
+	}
+
+	// Play montage on third person mesh
+	if (GetMesh() && GetMesh()->GetAnimInstance())
+	{
+		GetMesh()->GetAnimInstance()->Montage_Play(Montage);
+	}
+}
+
+void AFPSCharacter::AddWeaponRecoil(float Recoil)
+{
+	if (Controller && Recoil > 0.0f)
+	{
+		// Add pitch recoil to controller
+		AddControllerPitchInput(-Recoil);
+	}
+}
+
+void AFPSCharacter::UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize)
+{
+	// TODO: Update HUD/UI with ammo information
+	// This would typically update a UMG widget
+	UE_LOG(LogTemp, Log, TEXT("Ammo: %d/%d"), CurrentAmmo, MagazineSize);
+}
+
+FVector AFPSCharacter::GetWeaponTargetLocation()
+{
+	if (!FirstPersonCameraComponent)
+	{
+		return GetActorLocation() + GetActorForwardVector() * MaxAimDistance;
+	}
+
+	// Get camera location and rotation
+	FVector CameraLocation = FirstPersonCameraComponent->GetComponentLocation();
+	FVector CameraForward = FirstPersonCameraComponent->GetForwardVector();
+
+	// Perform line trace from camera
+	FVector TraceEnd = CameraLocation + (CameraForward * MaxAimDistance);
+
+	FHitResult HitResult;
+	FCollisionQueryParams TraceParams;
+	TraceParams.AddIgnoredActor(this);
+	TraceParams.bTraceComplex = true;
+
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		CameraLocation,
+		TraceEnd,
+		ECollisionChannel::ECC_Visibility,
+		TraceParams
+	);
+
+	if (bHit)
+	{
+		return HitResult.Location;
+	}
+
+	return TraceEnd;
+}
+
+void AFPSCharacter::AddWeaponClass(const TSubclassOf<AFPSWeapon>& WeaponClass)
+{
+	if (!WeaponClass || !GetWorld())
+	{
+		return;
+	}
+
+	// Spawn the weapon
+	FActorSpawnParameters SpawnParams;
+	SpawnParams.Owner = this;
+	SpawnParams.Instigator = this;
+
+	AFPSWeapon* NewWeapon = GetWorld()->SpawnActor<AFPSWeapon>(WeaponClass, SpawnParams);
+	if (NewWeapon)
+	{
+		// Add to owned weapons
+		OwnedWeapons.Add(NewWeapon);
+
+		// If no current weapon, equip this one
+		if (!CurrentWeapon)
+		{
+			EquipWeapon(NewWeapon);
+		}
+	}
+}
+
+void AFPSCharacter::OnWeaponActivated(AFPSWeapon* Weapon)
+{
+	if (!Weapon)
+	{
+		return;
+	}
+
+	// Set anim instance classes if provided
+	if (TSubclassOf<UAnimInstance> FPAnimClass = Weapon->GetFirstPersonAnimInstanceClass())
+	{
+		if (FirstPersonMesh)
+		{
+			FirstPersonMesh->SetAnimInstanceClass(FPAnimClass);
+		}
+	}
+
+	if (TSubclassOf<UAnimInstance> TPAnimClass = Weapon->GetThirdPersonAnimInstanceClass())
+	{
+		if (GetMesh())
+		{
+			GetMesh()->SetAnimInstanceClass(TPAnimClass);
+		}
+	}
+}
+
+void AFPSCharacter::OnWeaponDeactivated(AFPSWeapon* Weapon)
+{
+	// TODO: Reset anim instance classes to default if needed
+	// This would require storing the original anim instance classes
+}
+
+void AFPSCharacter::OnSemiWeaponRefire()
+{
+	// TODO: Implement if needed for semi-auto weapon feedback
+	// This could be used to show UI indicators or play sounds
+}
+
+// ========================================
+// Weapon Management Functions
+// ========================================
+
+void AFPSCharacter::EquipWeapon(AFPSWeapon* Weapon)
+{
+	if (!Weapon)
+	{
+		return;
+	}
+
+	// Unequip current weapon first
+	UnequipCurrentWeapon();
+
+	// Set new current weapon
+	CurrentWeapon = Weapon;
+
+	// Activate the weapon
+	CurrentWeapon->ActivateWeapon();
+}
+
+void AFPSCharacter::UnequipCurrentWeapon()
+{
+	if (CurrentWeapon)
+	{
+		CurrentWeapon->DeactivateWeapon();
+		CurrentWeapon = nullptr;
+	}
+}
+
+void AFPSCharacter::GiveDefaultWeapon()
+{
+	// GAS 학습 포인트: 기본 무기 지급
+	// AddWeaponClass는 IFPSWeaponHolder 인터페이스 함수
+	// 무기를 스폰하고 자동으로 장착까지 처리
+	if (DefaultWeaponClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("기본 무기 지급: %s"), *DefaultWeaponClass->GetName());
+		AddWeaponClass(DefaultWeaponClass);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("기본 무기 클래스가 설정되지 않음!"));
 	}
 }

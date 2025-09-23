@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "InputActionValue.h"
 #include "GameplayEffectTypes.h" // Added for FOnAttributeChangeData
+#include "FPS/Weapons/FPSWeaponHolder.h"
 #include "FPSCharacter.generated.h"
 
 class USkeletalMeshComponent;
@@ -17,9 +18,11 @@ class UInputMappingContext;
 class UInputAction;
 class UCameraComponent;
 class USpringArmComponent;
+class AFPSWeapon;
+class UAnimMontage;
 
 UCLASS()
-class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInterface
+class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInterface, public IFPSWeaponHolder
 {
 	GENERATED_BODY()
 
@@ -56,6 +59,17 @@ public:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
+	// IFPSWeaponHolder interface implementation
+	virtual void AttachWeaponMeshes(AFPSWeapon* Weapon) override;
+	virtual void PlayFiringMontage(UAnimMontage* Montage) override;
+	virtual void AddWeaponRecoil(float Recoil) override;
+	virtual void UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize) override;
+	virtual FVector GetWeaponTargetLocation() override;
+	virtual void AddWeaponClass(const TSubclassOf<AFPSWeapon>& WeaponClass) override;
+	virtual void OnWeaponActivated(AFPSWeapon* Weapon) override;
+	virtual void OnWeaponDeactivated(AFPSWeapon* Weapon) override;
+	virtual void OnSemiWeaponRefire() override;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category= "Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> FirstPersonMesh;
@@ -72,10 +86,49 @@ protected:
 
 	FTimerHandle RespawnTimerHandle;
 
+	// Weapon system
+	/** List of weapons owned by this character */
+	UPROPERTY(BlueprintReadOnly, Category="Weapons")
+	TArray<AFPSWeapon*> OwnedWeapons;
+
+	/** Currently equipped weapon */
+	UPROPERTY(BlueprintReadOnly, Category="Weapons")
+	TObjectPtr<AFPSWeapon> CurrentWeapon;
+
+	/** Name of the first person mesh weapon socket */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
+	FName FirstPersonWeaponSocket = FName("HandGrip_R");
+
+	/** Name of the third person mesh weapon socket */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
+	FName ThirdPersonWeaponSocket = FName("HandGrip_R");
+
+	/** Max distance to use for aim traces */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim", meta = (ClampMin = 0, ClampMax = 100000, Units = "cm"))
+	float MaxAimDistance = 10000.0f;
+
 public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TSubclassOf<UGameplayAbility> FireAbility;
+
+	// Weapon management functions
+	UFUNCTION(BlueprintCallable, Category="Weapons")
+	void EquipWeapon(AFPSWeapon* Weapon);
+
+	UFUNCTION(BlueprintCallable, Category="Weapons")
+	void UnequipCurrentWeapon();
+
+	UFUNCTION(BlueprintPure, Category="Weapons")
+	AFPSWeapon* GetCurrentWeapon() const { return CurrentWeapon; }
+
+	/** 테스트용: 기본 무기 자동 지급 */
+	UFUNCTION(BlueprintCallable, Category="Weapons")
+	void GiveDefaultWeapon();
+
+	/** 기본으로 지급할 무기 클래스 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
+	TSubclassOf<AFPSWeapon> DefaultWeaponClass;
 
 	// Input
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
