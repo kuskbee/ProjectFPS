@@ -97,7 +97,7 @@ protected:
 	// Weapon system
 	/** List of weapons owned by this character */
 	UPROPERTY(BlueprintReadOnly, Category="Weapons")
-	TArray<AFPSWeapon*> OwnedWeapons;
+	TArray<TObjectPtr<AFPSWeapon>> OwnedWeapons;
 
 	/** Currently equipped weapon */
 	UPROPERTY(BlueprintReadOnly, Category="Weapons")

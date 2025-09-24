@@ -29,11 +29,11 @@ class PROJECTFPS_API AFPSWeapon : public AActor
 
 	/** 1인칭 시점 메시 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	USkeletalMeshComponent* FirstPersonMesh;
+	TObjectPtr<USkeletalMeshComponent> FirstPersonMesh;
 
 	/** 3인칭 시점 메시 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	USkeletalMeshComponent* ThirdPersonMesh;
+	TObjectPtr<USkeletalMeshComponent> ThirdPersonMesh;
 
 protected:
 
@@ -62,7 +62,7 @@ protected:
 
 	/** 이 무기 발사 시 재생할 애니메이션 몽타주 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
-	UAnimMontage* FiringMontage;
+	TObjectPtr<UAnimMontage> FiringMontage;
 
 	/** 이 무기가 활성화될 때 1인칭 캐릭터 메시에 설정할 AnimInstance 클래스 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")

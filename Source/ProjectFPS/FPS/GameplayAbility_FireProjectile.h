@@ -25,11 +25,11 @@ protected:
 
 	/** 발사 시 재생할 사운드 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Audio")
-	class USoundBase* FireSound;
+	TObjectPtr<class USoundBase> FireSound;
 
 	/** 발사 시 재생할 파티클 이펙트 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
-	class UParticleSystem* MuzzleFlash;
+	TObjectPtr<class UParticleSystem> MuzzleFlash;
 
 	/** 머즐 플래시 재생을 위한 소켓 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
