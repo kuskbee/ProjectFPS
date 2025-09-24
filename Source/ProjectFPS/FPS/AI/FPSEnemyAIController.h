@@ -41,7 +41,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Settings")
 	float SightRange = 1500.0f; // 시야 범위
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Settings") 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Settings")
 	float AttackRange = 300.0f; // 공격 범위
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Settings")
@@ -49,6 +49,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Settings")
 	float TickInterval = 0.2f; // AI 업데이트 간격
+
+	// 무기 관련 설정
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Settings")
+	float FireRate = 1.0f; // 발사 간격 (초)
 
 	// 현재 AI 상태
 	UPROPERTY(BlueprintReadOnly, Category = "AI State")
@@ -64,6 +68,10 @@ protected:
 
 	// AI 업데이트 타이머
 	FTimerHandle AIUpdateTimer;
+
+	// 무기 발사 관련
+	FTimerHandle FireTimer;
+	float LastFireTime = 0.0f;
 
 protected:
 	// AI 핵심 함수들
@@ -91,6 +99,10 @@ protected:
 
 	// 상태 변경
 	void SetAIState(EAIState NewState);
+
+	// 무기 발사 함수들
+	void FireWeapon();
+	bool CanFireWeapon() const;
 
 public:
 	// Blueprint에서 사용할 수 있는 함수들

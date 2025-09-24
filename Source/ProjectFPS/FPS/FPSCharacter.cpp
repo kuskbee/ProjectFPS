@@ -2,6 +2,7 @@
 
 #include "FPS/FPSCharacter.h"
 #include "FPS/CharacterAttributeSet.h"
+#include "FPS/GameplayEffect_Heal.h"
 #include "FPS/Weapons/FPSWeapon.h"
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
@@ -56,11 +57,14 @@ AFPSCharacter::AFPSCharacter()
 
 	// Configure character movement
 	//GetCharacterMovement()->bOrientRotationToMovement = true;
-	
+
     // Let the controller rotation drive the character's yaw rotation.
 	/*bUseControllerRotationYaw = true;
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;*/
+
+	// Set default GameplayEffect classes
+	HealEffect = UGameplayEffect_Heal::StaticClass();
 }
 
 UAbilitySystemComponent* AFPSCharacter::GetAbilitySystemComponent() const
@@ -140,17 +144,22 @@ void AFPSCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
 	if (GEngine)
 	{
 		GEngine->AddOnScreenDebugMessage(
-			-1, 
-			5.f, 
-			FColor::Red, 
+			-1,
+			5.f,
+			FColor::Red,
 			FString::Printf(TEXT("현재 체력: %f"), Data.NewValue)
 		);
 	}
 
-	// 체력이 0 이하가 되면 사망 처리
-	if (Data.NewValue <= 0.0f)
+	// 체력이 0 이하가 되면 사망 처리 (단, 이미 죽은 상태가 아닐 때만)
+	if (Data.NewValue <= 0.0f && bIsAlive)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("체력 0 이하 - 사망 처리 시작 (bIsAlive: %s)"), bIsAlive ? TEXT("true") : TEXT("false"));
 		OnPlayerDeath();
+	}
+	else if (Data.NewValue <= 0.0f)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("체력 0 이하이지만 이미 죽은 상태 - 사망 처리 건너뜀"));
 	}
 }
 
@@ -173,6 +182,9 @@ void AFPSCharacter::OnPlayerDeath()
 {
 	UE_LOG(LogTemp, Warning, TEXT("캐릭터 사망!"));
 
+	// 사망 상태 설정 (발사체 Blueprint에서 체크 가능)
+	bIsAlive = false;
+
 	// 입력 비활성화
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -190,7 +202,7 @@ void AFPSCharacter::OnPlayerDeath()
 	}
 
 	// 캡슐 컴포넌트 충돌 비활성화
-	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	//GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 플레이어 캐릭터인 경우 GameMode에 사망 알림
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -201,6 +213,66 @@ void AFPSCharacter::OnPlayerDeath()
 	{
 		Destroy(); // 즉시 파괴
 	}
+}
+
+void AFPSCharacter::OnPlayerRespawn()
+{
+	UE_LOG(LogTemp, Warning, TEXT("플레이어 리스폰 상태 복구 시작"));
+
+	// 먼저 체력부터 회복 (bIsAlive가 false인 상태에서)
+	if (AbilitySystemComponent && AttributeSet)
+	{
+		// 체력 회복 전 상태 로깅
+		float CurrentHealth = AttributeSet->GetHealth();
+		float MaxHealthValue = AttributeSet->GetMaxHealth();
+		UE_LOG(LogTemp, Warning, TEXT("체력 회복 시작: 현재=%f, 최대=%f, bIsAlive=%s"),
+			CurrentHealth, MaxHealthValue, bIsAlive ? TEXT("true") : TEXT("false"));
+
+		// GameplayEffect_Heal을 사용하여 체력 회복
+		if (HealEffect && MaxHealthValue > 0.0f)
+		{
+			// GameplayEffectSpec을 생성하여 체력 회복
+			FGameplayEffectContextHandle ContextHandle = AbilitySystemComponent->MakeEffectContext();
+			FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(HealEffect, 1.0f, ContextHandle);
+
+			if (SpecHandle.IsValid())
+			{
+				// GameplayEffect를 적용하여 Health를 MaxHealth로 설정
+				AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+				UE_LOG(LogTemp, Warning, TEXT("GameplayEffect_Heal 적용: %f -> MaxHealth"), CurrentHealth);
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("HealEffect가 없거나 MaxHealth가 0 이하입니다. HealEffect=%s, MaxHealth=%f"),
+				HealEffect ? TEXT("유효함") : TEXT("없음"), MaxHealthValue);
+		}
+	}
+
+	// 체력 회복 후에 생존 상태 복구 (이제 안전함)
+	bIsAlive = true;
+	UE_LOG(LogTemp, Warning, TEXT("bIsAlive = true로 설정"));
+
+	// 입력 재활성화
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		EnableInput(PC);
+		UE_LOG(LogTemp, Warning, TEXT("입력 재활성화 완료"));
+	}
+
+	// 움직임 재활성화
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+	UE_LOG(LogTemp, Warning, TEXT("움직임 재활성화 완료"));
+
+	// 메시 다시 표시
+	GetMesh()->SetVisibility(true);
+	if (FirstPersonMesh)
+	{
+		FirstPersonMesh->SetVisibility(true);
+	}
+	UE_LOG(LogTemp, Warning, TEXT("메시 표시 완료"));
+
+	UE_LOG(LogTemp, Warning, TEXT("플레이어 리스폰 상태 복구 완료"));
 }
 
 void AFPSCharacter::FireAbilityPressed(const FInputActionValue& Value)

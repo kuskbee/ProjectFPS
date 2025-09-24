@@ -4,10 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "FPS/FPSCharacter.h"
+#include "FPS/Weapons/FPSWeaponHolder.h"
 #include "FPSEnemyCharacter.generated.h"
+
+class AFPSWeapon;
+class UAnimMontage;
 
 /**
  * AI가 조종하는 적 캐릭터 - AFPSCharacter 상속
+ * 부모 클래스에서 이미 IFPSWeaponHolder 인터페이스를 구현하고 있음
  */
 UCLASS()
 class PROJECTFPS_API AFPSEnemyCharacter : public AFPSCharacter
@@ -40,10 +45,24 @@ protected:
 
 	FTimerHandle DeathTimer;
 
+
 public:
+	// IFPSWeaponHolder 인터페이스 구현
+	virtual void AttachWeaponMeshes(AFPSWeapon* Weapon) override;
+	virtual void PlayFiringMontage(UAnimMontage* Montage) override;
+	virtual void AddWeaponRecoil(float Recoil) override;
+	virtual void UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize) override;
+	virtual FVector GetWeaponTargetLocation() override;
+	virtual void OnWeaponActivated(AFPSWeapon* Weapon) override;
+	virtual void OnWeaponDeactivated(AFPSWeapon* Weapon) override;
+	virtual void OnSemiWeaponRefire() override;
+
 	// AI에서 사용할 함수들
 	UFUNCTION(BlueprintPure, Category = "AI")
 	bool IsDead() const { return bIsDead; }
+
+	/** AI 전용: 기본 무기 자동 지급 (부모 클래스 오버라이드) */
+	virtual void GiveDefaultWeapon() override;
 
 protected:
 	// 사망 처리 (AI 전용)

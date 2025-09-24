@@ -20,6 +20,7 @@ class UCameraComponent;
 class USpringArmComponent;
 class AFPSWeapon;
 class UAnimMontage;
+class UGameplayEffect;
 
 UCLASS()
 class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInterface, public IFPSWeaponHolder
@@ -48,6 +49,9 @@ protected:
 	virtual void OnPlayerDeath();
 
 public:
+	// 플레이어 리스폰 처리
+	UFUNCTION(BlueprintCallable, Category="Player")
+	virtual void OnPlayerRespawn();
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -86,6 +90,10 @@ protected:
 
 	FTimerHandle RespawnTimerHandle;
 
+	// 플레이어 생존 상태 (Blueprint에서 발사체 충돌 체크용)
+	UPROPERTY(BlueprintReadOnly, Category="Player State")
+	bool bIsAlive = true;
+
 	// Weapon system
 	/** List of weapons owned by this character */
 	UPROPERTY(BlueprintReadOnly, Category="Weapons")
@@ -112,6 +120,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TSubclassOf<UGameplayAbility> FireAbility;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+	TSubclassOf<UGameplayEffect> HealEffect;
+
 	// Weapon management functions
 	UFUNCTION(BlueprintCallable, Category="Weapons")
 	void EquipWeapon(AFPSWeapon* Weapon);
@@ -124,7 +135,7 @@ public:
 
 	/** 테스트용: 기본 무기 자동 지급 */
 	UFUNCTION(BlueprintCallable, Category="Weapons")
-	void GiveDefaultWeapon();
+	virtual void GiveDefaultWeapon();
 
 	/** 기본으로 지급할 무기 클래스 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")

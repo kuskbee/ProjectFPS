@@ -2,6 +2,7 @@
 
 #include "FPS/AI/FPSEnemyAIController.h"
 #include "FPS/AI/FPSEnemyCharacter.h"
+#include "FPS/Weapons/FPSWeapon.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
 #include "TimerManager.h"
@@ -245,24 +246,30 @@ void AFPSEnemyAIController::StartChasing()
 
 void AFPSEnemyAIController::StartAttacking()
 {
-	// 화면에 공격 상태 표시
-	if (GEngine)
+	if (!TargetPawn || !ControlledEnemy)
 	{
-		GEngine->AddOnScreenDebugMessage(-1, 0.5f, FColor::Red, TEXT("적 공격중!"));
+		return;
 	}
-	
+
 	// 플레이어 방향으로 회전
-	if (TargetPawn && ControlledEnemy)
+	FVector LookDirection = (TargetPawn->GetActorLocation() - ControlledEnemy->GetActorLocation()).GetSafeNormal();
+	FRotator TargetRotation = LookDirection.Rotation();
+	ControlledEnemy->SetActorRotation(TargetRotation);
+
+	// 무기 발사 시도
+	if (CanFireWeapon())
 	{
-		FVector LookDirection = (TargetPawn->GetActorLocation() - ControlledEnemy->GetActorLocation()).GetSafeNormal();
-		FRotator TargetRotation = LookDirection.Rotation();
-		ControlledEnemy->SetActorRotation(TargetRotation);
+		FireWeapon();
 	}
 }
 
 void AFPSEnemyAIController::StopAttacking()
 {
-	// TODO: 무기 시스템 연동 시 구현
+	// 발사 타이머 정리
+	if (GetWorld())
+	{
+		GetWorld()->GetTimerManager().ClearTimer(FireTimer);
+	}
 }
 
 // 상태 변경
@@ -294,5 +301,82 @@ void AFPSEnemyAIController::SetAIState(EAIState NewState)
 		StopMovement();
 		break;
 	}
+}
+
+// ========================================
+// 무기 발사 함수들
+// ========================================
+
+void AFPSEnemyAIController::FireWeapon()
+{
+	if (!ControlledEnemy)
+	{
+		return;
+	}
+
+	// 현재 무기가 있는지 확인
+	AFPSWeapon* CurrentWeapon = ControlledEnemy->GetCurrentWeapon();
+	if (!CurrentWeapon)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("적이 무기를 가지고 있지 않음!"));
+		return;
+	}
+
+	// 무기 발사
+	CurrentWeapon->StartFiring();
+
+	// 마지막 발사 시간 업데이트
+	LastFireTime = GetWorld()->GetTimeSeconds();
+
+	// 디버그 메시지
+	if (GEngine)
+	{
+		GEngine->AddOnScreenDebugMessage(-1, 1.0f, FColor::Red, TEXT("적이 발사!"));
+	}
+
+	// 연사를 위해 다음 발사 예약 (단발 무기의 경우)
+	// 자동 무기는 FPSWeapon에서 자체적으로 연사 처리
+	if (GetWorld() && FireRate > 0.0f)
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			FireTimer,
+			[this]()
+			{
+				if (ControlledEnemy && ControlledEnemy->GetCurrentWeapon())
+				{
+					ControlledEnemy->GetCurrentWeapon()->StopFiring();
+				}
+			},
+			0.1f,  // 짧게 발사하고 중단
+			false
+		);
+	}
+}
+
+bool AFPSEnemyAIController::CanFireWeapon() const
+{
+	if (!ControlledEnemy)
+	{
+		return false;
+	}
+
+	// 무기가 있는지 확인
+	AFPSWeapon* CurrentWeapon = ControlledEnemy->GetCurrentWeapon();
+	if (!CurrentWeapon)
+	{
+		return false;
+	}
+
+	// 발사 간격 체크
+	if (GetWorld())
+	{
+		float CurrentTime = GetWorld()->GetTimeSeconds();
+		if (CurrentTime - LastFireTime < FireRate)
+		{
+			return false;
+		}
+	}
+
+	return true;
 }
 
