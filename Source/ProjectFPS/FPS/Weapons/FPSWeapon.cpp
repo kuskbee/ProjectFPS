@@ -85,8 +85,26 @@ void AFPSWeapon::EndPlay(EEndPlayReason::Type EndPlayReason)
 void AFPSWeapon::OnOwnerDestroyed(AActor* DestroyedActor)
 {
 	// 소유자가 파괴됨, 정리 작업
+	UE_LOG(LogTemp, Warning, TEXT("무기 소유자 파괴됨 - 무기도 파괴: %s"), *GetName());
+
 	WeaponOwner = nullptr;
 	PawnOwner = nullptr;
+
+	// 발사 중지
+	StopFiring();
+
+	// 무기도 같이 파괴 (약간의 딜레이를 주어 안전하게 처리)
+	if (GetWorld())
+	{
+		FTimerHandle DestroyTimer;
+		GetWorld()->GetTimerManager().SetTimer(DestroyTimer, [this]()
+		{
+			if (IsValid(this))
+			{
+				Destroy();
+			}
+		}, 0.1f, false);
+	}
 }
 
 void AFPSWeapon::ActivateWeapon()

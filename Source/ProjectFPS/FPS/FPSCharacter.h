@@ -28,17 +28,17 @@ class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInt
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this character's properties
+	// 캐릭터 기본값 설정
 	AFPSCharacter();
 	
-	// IAbilitySystemInterface를 구현하기 위해 필요한 함수
+	// IAbilitySystemInterface 구현을 위한 필수 함수
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
 protected:
-	// Called when the game starts or when spawned
+	// 게임 시작 시 또는 스폰될 때 호출
 	virtual void BeginPlay() override;
 
-	// Called when Health attribute is changed
+	// Health 속성 변경 시 호출
 	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
 
 	UFUNCTION(Server, Reliable)
@@ -52,18 +52,18 @@ public:
 	// 플레이어 리스폰 처리
 	UFUNCTION(BlueprintCallable, Category="Player")
 	virtual void OnPlayerRespawn();
-	// Called every frame
+	// 매 프레임마다 호출
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
+	// 입력과 기능을 바인딩하기 위해 호출
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	// Input Action handler functions
+	// 입력 액션 핸들러 함수들
 	void FireAbilityPressed(const FInputActionValue& Value);
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
-	// IFPSWeaponHolder interface implementation
+	// IFPSWeaponHolder 인터페이스 구현
 	virtual void AttachWeaponMeshes(AFPSWeapon* Weapon) override;
 	virtual void PlayFiringMontage(UAnimMontage* Montage) override;
 	virtual void AddWeaponRecoil(float Recoil) override;
@@ -84,7 +84,7 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UCharacterAttributeSet> AttributeSet;
 
-	// First person camera
+	// 1인칭 카메라
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> FirstPersonCameraComponent;
 
@@ -94,24 +94,24 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Player State")
 	bool bIsAlive = true;
 
-	// Weapon system
-	/** List of weapons owned by this character */
+	// 무기 시스템
+	/** 이 캐릭터가 소유한 무기 목록 */
 	UPROPERTY(BlueprintReadOnly, Category="Weapons")
 	TArray<TObjectPtr<AFPSWeapon>> OwnedWeapons;
 
-	/** Currently equipped weapon */
+	/** 현재 장착된 무기 */
 	UPROPERTY(BlueprintReadOnly, Category="Weapons")
 	TObjectPtr<AFPSWeapon> CurrentWeapon;
 
-	/** Name of the first person mesh weapon socket */
+	/** 1인칭 메시 무기 소켓 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
 	FName FirstPersonWeaponSocket = FName("HandGrip_R");
 
-	/** Name of the third person mesh weapon socket */
+	/** 3인칭 메시 무기 소켓 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
 	FName ThirdPersonWeaponSocket = FName("HandGrip_R");
 
-	/** Max distance to use for aim traces */
+	/** 조준 트레이스에 사용할 최대 거리 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim", meta = (ClampMin = 0, ClampMax = 100000, Units = "cm"))
 	float MaxAimDistance = 10000.0f;
 
@@ -123,7 +123,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TSubclassOf<UGameplayEffect> HealEffect;
 
-	// Weapon management functions
+	// 무기 관리 함수들
 	UFUNCTION(BlueprintCallable, Category="Weapons")
 	void EquipWeapon(AFPSWeapon* Weapon);
 
@@ -141,7 +141,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
 	TSubclassOf<AFPSWeapon> DefaultWeaponClass;
 
-	// Input
+	// 입력
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 

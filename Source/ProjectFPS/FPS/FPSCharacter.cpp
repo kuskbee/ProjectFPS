@@ -19,24 +19,24 @@
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
 
-// Sets default values
+// 기본값 설정
 AFPSCharacter::AFPSCharacter()
 {
- 	// Set this character to call Tick() every frame.
+ 	// 이 캐릭터가 매 프레임 Tick()을 호출하도록 설정
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Create Ability System Component
+	// Ability System Component 생성
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComp"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	AttributeSet = CreateDefaultSubobject<UCharacterAttributeSet>(TEXT("AttributeSet"));
 
-	// Create a mesh component for the 1st person view (visible only to owner)
+	// 1인칭 시점용 메시 컴포넌트 생성 (소유자에게만 보임)
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonMesh"));
-	FirstPersonMesh->SetupAttachment(GetMesh()); // Attach to the 3rd person mesh
-	FirstPersonMesh->SetOnlyOwnerSee(true); // Only visible to owning player
+	FirstPersonMesh->SetupAttachment(GetMesh()); // 3인칭 메시에 부착
+	FirstPersonMesh->SetOnlyOwnerSee(true); // 소유 플레이어에게만 보임
 	//FirstPersonMesh->SetOwnerNoSee(false); // Not hidden from others (though it's only seen by owner anyway)
-	FirstPersonMesh->SetCollisionProfileName(TEXT("NoCollision")); // No collision for 1st person mesh
+	FirstPersonMesh->SetCollisionProfileName(TEXT("NoCollision")); // 1인칭 메시는 충돌 없음
 
 	// 1인칭 카메라 생성 (이제 FirstPersonMesh에 직접 부착)
 	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("First Person Camera"));
@@ -48,22 +48,22 @@ AFPSCharacter::AFPSCharacter()
 	FirstPersonCameraComponent->FirstPersonFieldOfView = 70.0f;
 	FirstPersonCameraComponent->FirstPersonScale = 0.6f;
 
-	// Create a mesh component for the 3rd person view (visible to others)
-	// This is the default GetMesh() component
+	// 3인칭 시점용 메시 컴포넌트 생성 (타인에게 보임)
+	// 기본 GetMesh() 컴포넌트임
 	GetMesh()->SetRelativeLocationAndRotation(FVector(0, 0, -GetCapsuleComponent()->GetScaledCapsuleHalfHeight()), FRotator(0, -90, 0));
-	GetMesh()->SetOwnerNoSee(true); // Hide 3rd person mesh from owning player
+	GetMesh()->SetOwnerNoSee(true); // 소유 플레이어로부터 3인칭 메시 숨김
 	//GetMesh()->SetCollisionProfileName(TEXT("CharacterMesh")); // Set a proper collision profile
 	GetMesh()->FirstPersonPrimitiveType = EFirstPersonPrimitiveType::WorldSpaceRepresentation;
 
-	// Configure character movement
+	// 캐릭터 이동 설정
 	//GetCharacterMovement()->bOrientRotationToMovement = true;
 
-    // Let the controller rotation drive the character's yaw rotation.
+    // 컨트롤러 회전이 캐릭터의 yaw 회전을 조작하도록 설정
 	/*bUseControllerRotationYaw = true;
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;*/
 
-	// Set default GameplayEffect classes
+	// 기본 GameplayEffect 클래스 설정
 	HealEffect = UGameplayEffect_Heal::StaticClass();
 }
 
@@ -72,7 +72,7 @@ UAbilitySystemComponent* AFPSCharacter::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
-// Called when the game starts or when spawned
+// 게임 시작 또는 스폰될 때 호출
 void AFPSCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -97,7 +97,7 @@ void AFPSCharacter::BeginPlay()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 
-		// Bind to Health attribute change
+		// Health 속성 변경에 바인딩
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCharacterAttributeSet::GetHealthAttribute()).AddUObject(this, &AFPSCharacter::OnHealthChanged);
 
 		if (HasAuthority() && FireAbility)
@@ -110,30 +110,30 @@ void AFPSCharacter::BeginPlay()
 	GiveDefaultWeapon();
 }
 
-// Called every frame
+// 매 프레임 호출
 void AFPSCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
 }
 
-// Called to bind functionality to input
+// 입력에 기능을 바인딩하기 위해 호출
 void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent >(PlayerInputComponent))
 	{
-		// Fire
+		// 발사
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Triggered, this, &AFPSCharacter::FireAbilityPressed);
 
-		// Move
+		// 이동
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AFPSCharacter::Move);
 
-		// Look
+		// 시점 변경
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AFPSCharacter::Look);
 
-		// Jump
+		// 점프
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 	}
 }
@@ -280,12 +280,12 @@ void AFPSCharacter::FireAbilityPressed(const FInputActionValue& Value)
 	const bool bPressed = Value.Get<bool>();
 	if (bPressed)
 	{
-		// Use weapon system if we have a current weapon
+		// 현재 무기가 있으면 무기 시스템 사용
 		if (CurrentWeapon)
 		{
 			CurrentWeapon->StartFiring();
 		}
-		// Fallback to old direct ability activation for backward compatibility
+		// 하위 호환성을 위해 기존 직접 어빌리티 활성화로 폴백
 		else if (AbilitySystemComponent && FireAbility)
 		{
 			AbilitySystemComponent->TryActivateAbilityByClass(FireAbility);
@@ -293,7 +293,7 @@ void AFPSCharacter::FireAbilityPressed(const FInputActionValue& Value)
 	}
 	else
 	{
-		// Stop firing when button is released
+		// 버튼을 떼면 발사 중지
 		if (CurrentWeapon)
 		{
 			CurrentWeapon->StopFiring();
@@ -303,12 +303,12 @@ void AFPSCharacter::FireAbilityPressed(const FInputActionValue& Value)
 
 void AFPSCharacter::Move(const FInputActionValue& Value)
 {
-	// input is a Vector2D
+	// 입력은 Vector2D 형태
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
 	if (Controller != nullptr)
 	{
-		// add movement 
+		// 이동 입력 추가
 		AddMovementInput(GetActorForwardVector(), MovementVector.Y);
 		AddMovementInput(GetActorRightVector(), MovementVector.X);
 	}
@@ -316,19 +316,19 @@ void AFPSCharacter::Move(const FInputActionValue& Value)
 
 void AFPSCharacter::Look(const FInputActionValue& Value)
 {
-	// input is a Vector2D
+	// 입력은 Vector2D 형태
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
 	if (Controller != nullptr)
 	{
-		// add yaw and pitch input to controller
+		// 컨트롤러에 yaw 및 pitch 입력 추가
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
 }
 
 // ========================================
-// IFPSWeaponHolder Interface Implementation
+// IFPSWeaponHolder 인터페이스 구현
 // ========================================
 
 void AFPSCharacter::AttachWeaponMeshes(AFPSWeapon* Weapon)
@@ -338,7 +338,7 @@ void AFPSCharacter::AttachWeaponMeshes(AFPSWeapon* Weapon)
 		return;
 	}
 
-	// Attach first person weapon mesh to first person character mesh
+	// 1인칭 무기 메시를 1인칭 캐릭터 메시에 부착
 	if (USkeletalMeshComponent* WeaponFirstPersonMesh = Weapon->GetFirstPersonMesh())
 	{
 		WeaponFirstPersonMesh->AttachToComponent(
@@ -348,7 +348,7 @@ void AFPSCharacter::AttachWeaponMeshes(AFPSWeapon* Weapon)
 		);
 	}
 
-	// Attach third person weapon mesh to third person character mesh
+	// 3인칭 무기 메시를 3인칭 캐릭터 메시에 부착
 	if (USkeletalMeshComponent* WeaponThirdPersonMesh = Weapon->GetThirdPersonMesh())
 	{
 		WeaponThirdPersonMesh->AttachToComponent(
@@ -366,13 +366,13 @@ void AFPSCharacter::PlayFiringMontage(UAnimMontage* Montage)
 		return;
 	}
 
-	// Play montage on first person mesh
+	// 1인칭 메시에서 몽타주 재생
 	if (FirstPersonMesh && FirstPersonMesh->GetAnimInstance())
 	{
 		FirstPersonMesh->GetAnimInstance()->Montage_Play(Montage);
 	}
 
-	// Play montage on third person mesh
+	// 3인칭 메시에서 몽타주 재생
 	if (GetMesh() && GetMesh()->GetAnimInstance())
 	{
 		GetMesh()->GetAnimInstance()->Montage_Play(Montage);
@@ -383,15 +383,15 @@ void AFPSCharacter::AddWeaponRecoil(float Recoil)
 {
 	if (Controller && Recoil > 0.0f)
 	{
-		// Add pitch recoil to controller
+		// 컨트롤러에 pitch 반동 추가
 		AddControllerPitchInput(-Recoil);
 	}
 }
 
 void AFPSCharacter::UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize)
 {
-	// TODO: Update HUD/UI with ammo information
-	// This would typically update a UMG widget
+	// TODO: 탄약 정보로 HUD/UI 업데이트
+	// 보통 UMG 위젯을 업데이트함
 	UE_LOG(LogTemp, Log, TEXT("Ammo: %d/%d"), CurrentAmmo, MagazineSize);
 }
 
@@ -402,11 +402,11 @@ FVector AFPSCharacter::GetWeaponTargetLocation()
 		return GetActorLocation() + GetActorForwardVector() * MaxAimDistance;
 	}
 
-	// Get camera location and rotation
+	// 카메라 위치와 회전 가져오기
 	FVector CameraLocation = FirstPersonCameraComponent->GetComponentLocation();
 	FVector CameraForward = FirstPersonCameraComponent->GetForwardVector();
 
-	// Perform line trace from camera
+	// 카메라에서 라인 트레이스 수행
 	FVector TraceEnd = CameraLocation + (CameraForward * MaxAimDistance);
 
 	FHitResult HitResult;
@@ -437,7 +437,7 @@ void AFPSCharacter::AddWeaponClass(const TSubclassOf<AFPSWeapon>& WeaponClass)
 		return;
 	}
 
-	// Spawn the weapon
+	// 무기 스폰
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = this;
@@ -445,10 +445,10 @@ void AFPSCharacter::AddWeaponClass(const TSubclassOf<AFPSWeapon>& WeaponClass)
 	AFPSWeapon* NewWeapon = GetWorld()->SpawnActor<AFPSWeapon>(WeaponClass, SpawnParams);
 	if (NewWeapon)
 	{
-		// Add to owned weapons
+		// 소유 무기에 추가
 		OwnedWeapons.Add(NewWeapon);
 
-		// If no current weapon, equip this one
+		// 현재 무기가 없으면 이것을 장착
 		if (!CurrentWeapon)
 		{
 			EquipWeapon(NewWeapon);
@@ -463,7 +463,7 @@ void AFPSCharacter::OnWeaponActivated(AFPSWeapon* Weapon)
 		return;
 	}
 
-	// Set anim instance classes if provided
+	// 제공된 애님 인스턴스 클래스 설정
 	if (TSubclassOf<UAnimInstance> FPAnimClass = Weapon->GetFirstPersonAnimInstanceClass())
 	{
 		if (FirstPersonMesh)
@@ -483,18 +483,18 @@ void AFPSCharacter::OnWeaponActivated(AFPSWeapon* Weapon)
 
 void AFPSCharacter::OnWeaponDeactivated(AFPSWeapon* Weapon)
 {
-	// TODO: Reset anim instance classes to default if needed
-	// This would require storing the original anim instance classes
+	// TODO: 필요하면 애님 인스턴스 클래스를 기본값으로 재설정
+	// 원본 애님 인스턴스 클래스들을 저장해야 함
 }
 
 void AFPSCharacter::OnSemiWeaponRefire()
 {
-	// TODO: Implement if needed for semi-auto weapon feedback
-	// This could be used to show UI indicators or play sounds
+	// TODO: 반자동 무기 피드백에 필요하면 구현
+	// UI 표시기를 보여주거나 사운드를 재생하는데 사용할 수 있음
 }
 
 // ========================================
-// Weapon Management Functions
+// 무기 관리 함수들
 // ========================================
 
 void AFPSCharacter::EquipWeapon(AFPSWeapon* Weapon)
@@ -504,13 +504,13 @@ void AFPSCharacter::EquipWeapon(AFPSWeapon* Weapon)
 		return;
 	}
 
-	// Unequip current weapon first
+	// 먼저 현재 무기 해제
 	UnequipCurrentWeapon();
 
-	// Set new current weapon
+	// 새로운 현재 무기 설정
 	CurrentWeapon = Weapon;
 
-	// Activate the weapon
+	// 무기 활성화
 	CurrentWeapon->ActivateWeapon();
 }
 

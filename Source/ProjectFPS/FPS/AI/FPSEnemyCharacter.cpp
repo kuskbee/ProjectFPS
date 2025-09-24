@@ -44,9 +44,6 @@ AFPSEnemyCharacter::AFPSEnemyCharacter()
 void AFPSEnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// AI 전용 기본 무기 지급
-	GiveDefaultWeapon();
 }
 
 void AFPSEnemyCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
@@ -93,6 +90,19 @@ void AFPSEnemyCharacter::OnPlayerDeath()
 	// 메시 숨기기 (나중에 래그돌로 변경 가능)
 	GetMesh()->SetVisibility(false);
 
+	// 현재 무기도 즉시 숨기기
+	if (CurrentWeapon)
+	{
+		if (CurrentWeapon->GetFirstPersonMesh())
+		{
+			CurrentWeapon->GetFirstPersonMesh()->SetVisibility(false);
+		}
+		if (CurrentWeapon->GetThirdPersonMesh())
+		{
+			CurrentWeapon->GetThirdPersonMesh()->SetVisibility(false);
+		}
+	}
+
 	// 일정 시간 후 파괴
 	GetWorld()->GetTimerManager().SetTimer(DeathTimer, this, &AFPSEnemyCharacter::OnDeathDestroy, DeathDestroyDelay, false);
 }
@@ -105,6 +115,9 @@ void AFPSEnemyCharacter::Die()
 
 void AFPSEnemyCharacter::OnDeathDestroy()
 {
+	UE_LOG(LogTemp, Warning, TEXT("적 캐릭터 파괴 - 무기들은 OnOwnerDestroyed 델리게이트로 자동 처리됨"));
+
+	// 캐릭터 파괴 (무기들은 OnOwnerDestroyed 델리게이트를 통해 자동으로 파괴됨)
 	Destroy();
 }
 
