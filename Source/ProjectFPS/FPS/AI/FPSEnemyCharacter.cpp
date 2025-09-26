@@ -3,6 +3,7 @@
 #include "FPS/AI/FPSEnemyCharacter.h"
 #include "FPS/AI/FPSEnemyAIController.h"
 #include "FPS/Weapons/FPSWeapon.h"
+#include "FPS/Components/WeaponSlotComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -91,7 +92,12 @@ void AFPSEnemyCharacter::OnPlayerDeath()
 	GetMesh()->SetVisibility(false);
 
 	// 현재 무기도 즉시 숨기기
-	if (CurrentWeapon)
+	UWeaponSlotComponent* WSC = GetWeaponSlotComponent();
+	if (WSC)
+	{
+		WSC->ShowCurrentWeapon(false);
+	}
+	/*if (CurrentWeapon)
 	{
 		if (CurrentWeapon->GetFirstPersonMesh())
 		{
@@ -101,7 +107,7 @@ void AFPSEnemyCharacter::OnPlayerDeath()
 		{
 			CurrentWeapon->GetThirdPersonMesh()->SetVisibility(false);
 		}
-	}
+	}*/
 
 	// 일정 시간 후 파괴
 	GetWorld()->GetTimerManager().SetTimer(DeathTimer, this, &AFPSEnemyCharacter::OnDeathDestroy, DeathDestroyDelay, false);

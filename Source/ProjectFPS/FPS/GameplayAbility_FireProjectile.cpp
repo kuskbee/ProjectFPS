@@ -3,6 +3,7 @@
 #include "FPS/GameplayAbility_FireProjectile.h"
 #include "FPS/FPSCharacter.h"
 #include "FPS/Weapons/FPSWeapon.h"
+#include "FPS/Components/WeaponSlotComponent.h"
 #include "AbilitySystemComponent.h"
 #include "Engine/World.h"
 #include "Sound/SoundBase.h"
@@ -109,7 +110,11 @@ AFPSWeapon* UGameplayAbility_FireProjectile::GetCurrentWeapon() const
 {
 	if (AFPSCharacter* FPSCharacter = Cast<AFPSCharacter>(GetAvatarActorFromActorInfo()))
 	{
-		return FPSCharacter->GetCurrentWeapon();
+		UWeaponSlotComponent* WSC = FPSCharacter->GetWeaponSlotComponent();
+		if (WSC)
+		{
+			return WSC->GetCurrentWeaponActor();
+		}
 	}
 
 	return nullptr;

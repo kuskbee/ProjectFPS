@@ -21,6 +21,7 @@ class USpringArmComponent;
 class AFPSWeapon;
 class UAnimMontage;
 class UGameplayEffect;
+class UWeaponSlotComponent;
 
 UCLASS()
 class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInterface, public IFPSWeaponHolder
@@ -62,6 +63,9 @@ public:
 	void FireAbilityPressed(const FInputActionValue& Value);
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
+	void SwitchWeaponSlot(const FInputActionValue& Value);
+	void SwitchToPrimaryWeapon(const FInputActionValue& Value);
+	void SwitchToSecondaryWeapon(const FInputActionValue& Value);
 
 	// IFPSWeaponHolder 인터페이스 구현
 	virtual void AttachWeaponMeshes(AFPSWeapon* Weapon) override;
@@ -84,6 +88,10 @@ protected:
 	UPROPERTY()
 	TObjectPtr<UCharacterAttributeSet> AttributeSet;
 
+	// 무기 슬롯 관리 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UWeaponSlotComponent> WeaponSlotComponent;
+
 	// 1인칭 카메라
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> FirstPersonCameraComponent;
@@ -94,14 +102,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category="Player State")
 	bool bIsAlive = true;
 
-	// 무기 시스템
-	/** 이 캐릭터가 소유한 무기 목록 */
-	UPROPERTY(BlueprintReadOnly, Category="Weapons")
-	TArray<TObjectPtr<AFPSWeapon>> OwnedWeapons;
-
-	/** 현재 장착된 무기 */
-	UPROPERTY(BlueprintReadOnly, Category="Weapons")
-	TObjectPtr<AFPSWeapon> CurrentWeapon;
+	// 무기 소켓 이름들
 
 	/** 1인칭 메시 무기 소켓 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
@@ -115,6 +116,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim", meta = (ClampMin = 0, ClampMax = 100000, Units = "cm"))
 	float MaxAimDistance = 10000.0f;
 
+	// 기본 애니메이션 인스턴스 클래스들 (무기 비활성화 시 복원용)
+	TSubclassOf<UAnimInstance> DefaultFirstPersonAnimClass;
+	TSubclassOf<UAnimInstance> DefaultThirdPersonAnimClass;
+
 public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
@@ -123,15 +128,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TSubclassOf<UGameplayEffect> HealEffect;
 
-	// 무기 관리 함수들
+	// 무기 슬롯 관리 함수들
 	UFUNCTION(BlueprintCallable, Category="Weapons")
-	void EquipWeapon(AFPSWeapon* Weapon);
-
-	UFUNCTION(BlueprintCallable, Category="Weapons")
-	void UnequipCurrentWeapon();
-
-	UFUNCTION(BlueprintPure, Category="Weapons")
-	AFPSWeapon* GetCurrentWeapon() const { return CurrentWeapon; }
+	class UWeaponSlotComponent* GetWeaponSlotComponent() const { return WeaponSlotComponent; }
 
 	/** 테스트용: 기본 무기 자동 지급 */
 	UFUNCTION(BlueprintCallable, Category="Weapons")
@@ -159,4 +158,13 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> JumpAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> SwitchWeaponAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> PrimaryWeaponAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> SecondaryWeaponAction;
 };

@@ -1,0 +1,73 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Engine/DataAsset.h"
+#include "BaseItemData.generated.h"
+
+/** 아이템 타입 열거형 */
+UENUM(BlueprintType)
+enum class EItemType : uint8
+{
+	None = 0,
+	Weapon = 1,
+	Consumable = 2,
+	Equipment = 3,
+	Ammo = 4,
+	Misc = 5
+};
+
+/**
+ * 모든 아이템의 기본 데이터 클래스
+ * 다양한 아이템 타입의 기본이 되는 클래스
+ */
+UCLASS(BlueprintType, Blueprintable)
+class PROJECTFPS_API UBaseItemData : public UDataAsset
+{
+	GENERATED_BODY()
+
+public:
+	UBaseItemData();
+
+	/** 아이템 이름 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info")
+	FString ItemName = TEXT("Unknown Item");
+
+	/** 아이템 설명 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info", meta = (MultiLine = true))
+	FString ItemDescription = TEXT("No description available.");
+
+	/** 아이템 아이콘 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info")
+	TObjectPtr<UTexture2D> ItemIcon;
+
+	/** 아이템 타입 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info")
+	EItemType ItemType = EItemType::None;
+
+	/** 최대 스택 크기 (1 = 스택 불가) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info", meta = (ClampMin = 1, ClampMax = 999))
+	int32 MaxStackSize = 1;
+
+	/** 아이템 희귀도 (나중에 색상 등에 활용) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info")
+	int32 Rarity = 0;
+
+	/** 아이템 가치 (상점 시스템용) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info", meta = (ClampMin = 0))
+	int32 ItemValue = 0;
+
+public:
+	/** 아이템 타입 반환 */
+	UFUNCTION(BlueprintPure, Category = "Item")
+	EItemType GetItemType() const { return ItemType; }
+
+	/** 스택 가능 여부 반환 */
+	UFUNCTION(BlueprintPure, Category = "Item")
+	bool IsStackable() const { return MaxStackSize > 1; }
+
+	/** 아이템 이름 반환 */
+	UFUNCTION(BlueprintPure, Category = "Item")
+	FString GetItemName() const { return ItemName; }
+};

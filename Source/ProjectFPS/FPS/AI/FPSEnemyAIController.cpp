@@ -3,6 +3,7 @@
 #include "FPS/AI/FPSEnemyAIController.h"
 #include "FPS/AI/FPSEnemyCharacter.h"
 #include "FPS/Weapons/FPSWeapon.h"
+#include "FPS/Components/WeaponSlotComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
 #include "TimerManager.h"
@@ -315,7 +316,13 @@ void AFPSEnemyAIController::FireWeapon()
 	}
 
 	// 현재 무기가 있는지 확인
-	AFPSWeapon* CurrentWeapon = ControlledEnemy->GetCurrentWeapon();
+	UWeaponSlotComponent* WSC = ControlledEnemy->GetWeaponSlotComponent();
+	if (!WSC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("적이 무기 슬롯 컴포넌트를 가지고 있지 않음!"));
+		return;
+	}
+	AFPSWeapon* CurrentWeapon = WSC->GetCurrentWeaponActor();
 	if (!CurrentWeapon)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("적이 무기를 가지고 있지 않음!"));
@@ -342,9 +349,22 @@ void AFPSEnemyAIController::FireWeapon()
 			FireTimer,
 			[this]()
 			{
-				if (ControlledEnemy && ControlledEnemy->GetCurrentWeapon())
+				if (ControlledEnemy)
 				{
-					ControlledEnemy->GetCurrentWeapon()->StopFiring();
+					UWeaponSlotComponent* _WSC = ControlledEnemy->GetWeaponSlotComponent();
+					if (!_WSC)
+					{
+						UE_LOG(LogTemp, Warning, TEXT("적이 무기 슬롯 컴포넌트를 가지고 있지 않음!"));
+						return;
+					}
+					AFPSWeapon* _CurrentWeapon = _WSC->GetCurrentWeaponActor();
+					if (!_CurrentWeapon)
+					{
+						UE_LOG(LogTemp, Warning, TEXT("적이 무기를 가지고 있지 않음!"));
+						return;
+					}
+
+					_CurrentWeapon->StopFiring();
 				}
 			},
 			0.1f,  // 짧게 발사하고 중단
@@ -361,7 +381,12 @@ bool AFPSEnemyAIController::CanFireWeapon() const
 	}
 
 	// 무기가 있는지 확인
-	AFPSWeapon* CurrentWeapon = ControlledEnemy->GetCurrentWeapon();
+	UWeaponSlotComponent* WSC = ControlledEnemy->GetWeaponSlotComponent();
+	if (!WSC)
+	{
+		return false;
+	}
+	AFPSWeapon* CurrentWeapon = WSC->GetCurrentWeaponActor();
 	if (!CurrentWeapon)
 	{
 		return false;

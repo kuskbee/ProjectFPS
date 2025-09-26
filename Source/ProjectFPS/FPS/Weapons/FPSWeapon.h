@@ -219,4 +219,8 @@ public:
 	/** 탄약 소모 (성공 시 true 반환) */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool ConsumeAmmo(int32 AmmoToConsume = 1);
+
+	/** WeaponItemData로부터 무기 설정 초기화 */
+	UFUNCTION(BlueprintCallable, Category="Weapon")
+	void InitializeFromItemData(class UWeaponItemData* ItemData);
 };

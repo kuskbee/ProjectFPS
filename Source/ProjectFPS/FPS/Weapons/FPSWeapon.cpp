@@ -2,6 +2,7 @@
 
 #include "FPSWeapon.h"
 #include "FPSWeaponHolder.h"
+#include "FPS/Items/WeaponItemData.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Animation/AnimInstance.h"
@@ -336,4 +337,30 @@ bool AFPSWeapon::ConsumeAmmo(int32 AmmoToConsume)
 	}
 
 	return false;
+}
+
+void AFPSWeapon::InitializeFromItemData(UWeaponItemData* ItemData)
+{
+	if (!ItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("InitializeFromItemData: ItemData가 null입니다!"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("무기를 ItemData로 초기화: %s"), *ItemData->GetItemName());
+
+	// WeaponItemData의 값들을 FPSWeapon에 적용
+	MagazineSize = ItemData->MagazineSize;
+	RefireRate = 1.0f / ItemData->FireRate; // FireRate(초당 발사횟수) -> RefireRate(발사간격)로 변환
+	AimVariance = ItemData->AccuracySpread;
+	FiringRecoil = ItemData->RecoilStrength;
+	bFullAuto = ItemData->bIsAutomatic;
+
+	// 현재 탄약도 탄창 크기에 맞춰 설정
+	CurrentBullets = MagazineSize;
+
+	// TODO: WeaponRange 등 추가 스탯들도 적용
+
+	UE_LOG(LogTemp, Log, TEXT("무기 초기화 완료 - 탄창:%d, 연사속도:%.2f, 정확도:%.2f"),
+		MagazineSize, RefireRate, AimVariance);
 }

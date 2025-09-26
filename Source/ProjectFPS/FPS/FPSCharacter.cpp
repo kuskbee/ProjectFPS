@@ -4,6 +4,7 @@
 #include "FPS/CharacterAttributeSet.h"
 #include "FPS/GameplayEffect_Heal.h"
 #include "FPS/Weapons/FPSWeapon.h"
+#include "FPS/Components/WeaponSlotComponent.h"
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -30,6 +31,9 @@ AFPSCharacter::AFPSCharacter()
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	AttributeSet = CreateDefaultSubobject<UCharacterAttributeSet>(TEXT("AttributeSet"));
+
+	// 무기 슬롯 컴포넌트 생성
+	WeaponSlotComponent = CreateDefaultSubobject<UWeaponSlotComponent>(TEXT("WeaponSlotComponent"));
 
 	// 1인칭 시점용 메시 컴포넌트 생성 (소유자에게만 보임)
 	FirstPersonMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonMesh"));
@@ -97,6 +101,16 @@ void AFPSCharacter::BeginPlay()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 
+		// 기본 AnimInstance 클래스들 저장 (무기 비활성화 시 복원용)
+		if (FirstPersonMesh)
+		{
+			DefaultFirstPersonAnimClass = FirstPersonMesh->GetAnimClass();
+		}
+		if (GetMesh())
+		{
+			DefaultThirdPersonAnimClass = GetMesh()->GetAnimClass();
+		}
+
 		// Health 속성 변경에 바인딩
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCharacterAttributeSet::GetHealthAttribute()).AddUObject(this, &AFPSCharacter::OnHealthChanged);
 
@@ -135,6 +149,24 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 		// 점프
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
+
+		// 무기 전환
+		if (SwitchWeaponAction)
+		{
+			EnhancedInputComponent->BindAction(SwitchWeaponAction, ETriggerEvent::Triggered, this, &AFPSCharacter::SwitchWeaponSlot);
+		}
+
+		// 1번 무기 (Primary)
+		if (PrimaryWeaponAction)
+		{
+			EnhancedInputComponent->BindAction(PrimaryWeaponAction, ETriggerEvent::Triggered, this, &AFPSCharacter::SwitchToPrimaryWeapon);
+		}
+
+		// 2번 무기 (Secondary)
+		if (SecondaryWeaponAction)
+		{
+			EnhancedInputComponent->BindAction(SecondaryWeaponAction, ETriggerEvent::Triggered, this, &AFPSCharacter::SwitchToSecondaryWeapon);
+		}
 	}
 }
 
@@ -280,10 +312,13 @@ void AFPSCharacter::FireAbilityPressed(const FInputActionValue& Value)
 	const bool bPressed = Value.Get<bool>();
 	if (bPressed)
 	{
-		// 현재 무기가 있으면 무기 시스템 사용
-		if (CurrentWeapon)
+		// 새로운 WeaponSlotComponent 시스템 사용
+		if (WeaponSlotComponent)
 		{
-			CurrentWeapon->StartFiring();
+			if (AFPSWeapon* CurrentWeapon = WeaponSlotComponent->GetCurrentWeaponActor())
+			{
+				CurrentWeapon->StartFiring();
+			}
 		}
 		// 하위 호환성을 위해 기존 직접 어빌리티 활성화로 폴백
 		else if (AbilitySystemComponent && FireAbility)
@@ -294,9 +329,12 @@ void AFPSCharacter::FireAbilityPressed(const FInputActionValue& Value)
 	else
 	{
 		// 버튼을 떼면 발사 중지
-		if (CurrentWeapon)
+		if (WeaponSlotComponent)
 		{
-			CurrentWeapon->StopFiring();
+			if (AFPSWeapon* CurrentWeapon = WeaponSlotComponent->GetCurrentWeaponActor())
+			{
+				CurrentWeapon->StopFiring();
+			}
 		}
 	}
 }
@@ -432,28 +470,14 @@ FVector AFPSCharacter::GetWeaponTargetLocation()
 
 void AFPSCharacter::AddWeaponClass(const TSubclassOf<AFPSWeapon>& WeaponClass)
 {
+	// TODO: 나중에 WeaponItemData 시스템으로 교체
+	// 임시로 레거시 시스템 유지
 	if (!WeaponClass || !GetWorld())
 	{
 		return;
 	}
 
-	// 무기 스폰
-	FActorSpawnParameters SpawnParams;
-	SpawnParams.Owner = this;
-	SpawnParams.Instigator = this;
-
-	AFPSWeapon* NewWeapon = GetWorld()->SpawnActor<AFPSWeapon>(WeaponClass, SpawnParams);
-	if (NewWeapon)
-	{
-		// 소유 무기에 추가
-		OwnedWeapons.Add(NewWeapon);
-
-		// 현재 무기가 없으면 이것을 장착
-		if (!CurrentWeapon)
-		{
-			EquipWeapon(NewWeapon);
-		}
-	}
+	UE_LOG(LogTemp, Warning, TEXT("AddWeaponClass: WeaponSlotComponent 시스템으로 교체 필요"));
 }
 
 void AFPSCharacter::OnWeaponActivated(AFPSWeapon* Weapon)
@@ -483,8 +507,18 @@ void AFPSCharacter::OnWeaponActivated(AFPSWeapon* Weapon)
 
 void AFPSCharacter::OnWeaponDeactivated(AFPSWeapon* Weapon)
 {
-	// TODO: 필요하면 애님 인스턴스 클래스를 기본값으로 재설정
-	// 원본 애님 인스턴스 클래스들을 저장해야 함
+	// 기본 애님 인스턴스 클래스로 복원
+	if (DefaultFirstPersonAnimClass && FirstPersonMesh)
+	{
+		FirstPersonMesh->SetAnimInstanceClass(DefaultFirstPersonAnimClass);
+		UE_LOG(LogTemp, Log, TEXT("1인칭 애니메이션을 기본값으로 복원"));
+	}
+
+	if (DefaultThirdPersonAnimClass && GetMesh())
+	{
+		GetMesh()->SetAnimInstanceClass(DefaultThirdPersonAnimClass);
+		UE_LOG(LogTemp, Log, TEXT("3인칭 애니메이션을 기본값으로 복원"));
+	}
 }
 
 void AFPSCharacter::OnSemiWeaponRefire()
@@ -494,44 +528,41 @@ void AFPSCharacter::OnSemiWeaponRefire()
 }
 
 // ========================================
-// 무기 관리 함수들
+// 무기 슬롯 입력 처리 함수들
 // ========================================
 
-void AFPSCharacter::EquipWeapon(AFPSWeapon* Weapon)
+void AFPSCharacter::SwitchWeaponSlot(const FInputActionValue& Value)
 {
-	if (!Weapon)
+	if (WeaponSlotComponent)
 	{
-		return;
+		WeaponSlotComponent->SwitchToNextSlot();
 	}
-
-	// 먼저 현재 무기 해제
-	UnequipCurrentWeapon();
-
-	// 새로운 현재 무기 설정
-	CurrentWeapon = Weapon;
-
-	// 무기 활성화
-	CurrentWeapon->ActivateWeapon();
 }
 
-void AFPSCharacter::UnequipCurrentWeapon()
+void AFPSCharacter::SwitchToPrimaryWeapon(const FInputActionValue& Value)
 {
-	if (CurrentWeapon)
+	if (WeaponSlotComponent)
 	{
-		CurrentWeapon->DeactivateWeapon();
-		CurrentWeapon = nullptr;
+		WeaponSlotComponent->SwitchToSlotByNumber(1); // 1 = Primary
+	}
+}
+
+void AFPSCharacter::SwitchToSecondaryWeapon(const FInputActionValue& Value)
+{
+	if (WeaponSlotComponent)
+	{
+		WeaponSlotComponent->SwitchToSlotByNumber(2); // 2 = Secondary
 	}
 }
 
 void AFPSCharacter::GiveDefaultWeapon()
 {
-	// GAS 학습 포인트: 기본 무기 지급
-	// AddWeaponClass는 IFPSWeaponHolder 인터페이스 함수
-	// 무기를 스폰하고 자동으로 장착까지 처리
+	// TODO: 나중에 WeaponItemData 시스템으로 교체
+	// 현재는 임시로 레거시 함수 유지
 	if (DefaultWeaponClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("기본 무기 지급: %s"), *DefaultWeaponClass->GetName());
-		AddWeaponClass(DefaultWeaponClass);
+		UE_LOG(LogTemp, Warning, TEXT("기본 무기 지급 (레거시): %s"), *DefaultWeaponClass->GetName());
+		UE_LOG(LogTemp, Warning, TEXT("WeaponSlotComponent와 WeaponItemData 시스템으로 교체 필요"));
 	}
 	else
 	{
