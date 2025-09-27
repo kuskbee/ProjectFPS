@@ -4,6 +4,7 @@
 #include "FPS/Items/WeaponItemData.h"
 #include "FPS/Weapons/FPSWeapon.h"
 #include "FPS/Weapons/FPSWeaponHolder.h"
+#include "FPS/Components/PickupTriggerComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "Components/StaticMeshComponent.h"
@@ -96,6 +97,13 @@ bool UWeaponSlotComponent::EquipWeaponToSlot(EWeaponSlot SlotType, UWeaponItemDa
 	// 슬롯에 저장
 	WeaponSlots[SlotIndex] = WeaponItem;
 	SpawnedWeapons[SlotIndex] = NewWeapon;
+
+	// 무기가 장착되었으므로 픽업 트리거 비활성화
+	if (UPickupTriggerComponent* PickupTrigger = NewWeapon->FindComponentByClass<UPickupTriggerComponent>())
+	{
+		PickupTrigger->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		UE_LOG(LogTemp, Log, TEXT("무기 장착 - 픽업 트리거 비활성화: %s"), *NewWeapon->GetName());
+	}
 
 	// 현재 활성 슬롯이 아니면 숨기기
 	if (SlotIndex != ActiveSlotIndex)
@@ -398,8 +406,8 @@ AFPSWeapon* UWeaponSlotComponent::SpawnWeaponActor(UWeaponItemData* WeaponItem)
 
 	if (NewWeapon)
 	{
-		// WeaponItemData로 무기 초기화
-		NewWeapon->InitializeFromItemData(WeaponItem);
+		// WeaponItemData 설정
+		NewWeapon->SetWeaponItemData(WeaponItem);
 
 		// WeaponHolder와 무기 연결
 		if (WeaponHolder)
@@ -441,6 +449,16 @@ void UWeaponSlotComponent::DetachWeaponFromSlot(int32 SlotIndex, bool bMakeVisib
 
 	// Drop인 경우 보이게, Switch인 경우 숨기게
 	ShowWeapon(Weapon, bMakeVisible);
+
+	// Drop인 경우 픽업 트리거 활성화
+	if (bMakeVisible)
+	{
+		if (UPickupTriggerComponent* PickupTrigger = Weapon->FindComponentByClass<UPickupTriggerComponent>())
+		{
+			PickupTrigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			UE_LOG(LogTemp, Log, TEXT("무기 드롭 - 픽업 트리거 활성화: %s"), *Weapon->GetName());
+		}
+	}
 }
 
 void UWeaponSlotComponent::ShowWeapon(AFPSWeapon* Weapon, bool bMakeVisible)

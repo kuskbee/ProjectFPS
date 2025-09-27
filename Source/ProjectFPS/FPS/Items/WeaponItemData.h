@@ -52,6 +52,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats")
 	bool bIsAutomatic = false;
 
+	// ========================================
+	// 런타임 상태 데이터 (게임 중 변경되는 값들)
+	// ========================================
+
+	/** 현재 탄약 수 */
+	UPROPERTY(BlueprintReadWrite, Category = "Runtime State")
+	int32 CurrentAmmo = 0;
+
+	/** 무기 내구도 (0.0 ~ 100.0) */
+	UPROPERTY(BlueprintReadWrite, Category = "Runtime State", meta = (ClampMin = 0.0, ClampMax = 100.0))
+	float Durability = 100.0f;
+
 public:
 	/** 무기 클래스가 유효한지 확인 */
 	UFUNCTION(BlueprintPure, Category = "Weapon")
@@ -60,4 +72,24 @@ public:
 	/** 무기 DPS 계산 */
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	float CalculateDPS() const { return BaseDamage * FireRate; }
+
+	/** 현재 탄약을 최대로 채우기 */
+	UFUNCTION(BlueprintCallable, Category = "Runtime State")
+	void RefillAmmo() { CurrentAmmo = MagazineSize; }
+
+	/** 탄약 소모 (성공 시 true 반환) */
+	UFUNCTION(BlueprintCallable, Category = "Runtime State")
+	bool ConsumeAmmo(int32 AmmoToConsume = 1);
+
+	/** 탄약이 비어있는지 확인 */
+	UFUNCTION(BlueprintPure, Category = "Runtime State")
+	bool IsAmmoEmpty() const { return CurrentAmmo <= 0; }
+
+	/** 탄약이 가득 찬지 확인 */
+	UFUNCTION(BlueprintPure, Category = "Runtime State")
+	bool IsAmmoFull() const { return CurrentAmmo >= MagazineSize; }
+
+	/** 발사 간격 계산 (FireRate -> RefireRate 변환) */
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	float GetRefireRate() const { return FireRate > 0.0f ? 1.0f / FireRate : 1.0f; }
 };

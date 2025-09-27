@@ -7,6 +7,7 @@
 #include "FPSWeaponHolder.h"
 #include "Animation/AnimInstance.h"
 #include "GameplayTagContainer.h"
+#include "FPS/Interfaces/Pickupable.h"
 #include "FPSWeapon.generated.h"
 
 class IFPSWeaponHolder;
@@ -15,6 +16,7 @@ class USkeletalMeshComponent;
 class UAnimMontage;
 class UAnimInstance;
 class UGameplayAbility;
+class UPickupTriggerComponent;
 
 /**
  * GAS 통합 FPS 무기를 위한 기본 클래스
@@ -23,7 +25,7 @@ class UGameplayAbility;
  * FPSWeaponHolder 인터페이스를 통해 무기 소유자와 상호작용
  */
 UCLASS(abstract, BlueprintType, Blueprintable)
-class PROJECTFPS_API AFPSWeapon : public AActor
+class PROJECTFPS_API AFPSWeapon : public AActor, public IPickupable
 {
 	GENERATED_BODY()
 
@@ -34,6 +36,10 @@ class PROJECTFPS_API AFPSWeapon : public AActor
 	/** 3인칭 시점 메시 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USkeletalMeshComponent> ThirdPersonMesh;
+
+	/** 픽업 감지용 트리거 컴포넌트 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UPickupTriggerComponent> PickupTrigger;
 
 protected:
 
@@ -52,13 +58,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Ammo")
 	TSubclassOf<AActor> ProjectileClass;
 
-	/** 탄창 내 탄약 수 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Ammo", meta = (ClampMin = 0, ClampMax = 100))
-	int32 MagazineSize = 10;
-
-	/** 현재 탄창 내 탄약 수 */
-	UPROPERTY(BlueprintReadOnly, Category="Ammo")
-	int32 CurrentBullets = 0;
+	/** 이 무기의 모든 데이터 (마스터 데이터 + 런타임 상태) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Item Data")
+	TObjectPtr<class UWeaponItemData> WeaponItemData;
 
 	/** 이 무기 발사 시 재생할 애니메이션 몽타주 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
@@ -72,13 +74,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
 	TSubclassOf<UAnimInstance> ThirdPersonAnimInstanceClass;
 
-	/** 조준 시 분산을 위한 원뿔 반각 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim", meta = (ClampMin = 0, ClampMax = 90, Units = "Degrees"))
-	float AimVariance = 0.0f;
-
-	/** 소유자에게 적용할 발사 반동량 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim", meta = (ClampMin = 0, ClampMax = 100))
-	float FiringRecoil = 0.0f;
+	// 조준 관련 데이터는 WeaponItemData에서 관리 (AccuracySpread, RecoilStrength)
 
 	/** 발사체가 생성될 1인칭 총구 소켓 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim")
@@ -88,13 +84,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Aim", meta = (ClampMin = 0, ClampMax = 1000, Units = "cm"))
 	float MuzzleOffset = 10.0f;
 
-	/** true인 경우, 이 무기는 연사 속도로 자동 발사됨 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Refire")
-	bool bFullAuto = false;
-
-	/** 이 무기의 발사 간격. 자동 및 반자동 모드 모두에 영향 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Refire", meta = (ClampMin = 0, ClampMax = 5, Units = "s"))
-	float RefireRate = 0.5f;
+	// 연사 관련 데이터는 WeaponItemData에서 관리 (bIsAutomatic, FireRate)
 
 	/** 마지막 발사 시점, 반자동 연사 속도 제한에 사용 */
 	float TimeOfLastShot = 0.0f;
@@ -119,6 +109,7 @@ protected:
 	/** 이 무기 발사로 생성되는 소음에 적용할 태그 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Perception")
 	FName ShotNoiseTag = FName("Shot");
+
 
 public:
 
@@ -194,11 +185,11 @@ public:
 
 	/** 탄창 크기 반환 */
 	UFUNCTION(BlueprintPure, Category="Weapon")
-	int32 GetMagazineSize() const { return MagazineSize; };
+	int32 GetMagazineSize() const;
 
 	/** 현재 탄약 수 반환 */
 	UFUNCTION(BlueprintPure, Category="Weapon")
-	int32 GetBulletCount() const { return CurrentBullets; }
+	int32 GetBulletCount() const;
 
 	/** 발사 어빌리티 클래스 반환 */
 	UFUNCTION(BlueprintPure, Category="Weapon")
@@ -212,15 +203,32 @@ public:
 	UFUNCTION(BlueprintPure, Category="Weapon")
 	TSubclassOf<AActor> GetProjectileClass() const { return ProjectileClass; }
 
-	/** 현재 탄약 설정 (GAS 통합용) */
+	/** 현재 탄약 설정 (WeaponItemData에 위임) */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	void SetCurrentAmmo(int32 NewAmmo);
 
-	/** 탄약 소모 (성공 시 true 반환) */
+	/** 탄약 소모 (WeaponItemData에 위임) */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
 	bool ConsumeAmmo(int32 AmmoToConsume = 1);
 
-	/** WeaponItemData로부터 무기 설정 초기화 */
+	/** WeaponItemData 설정 (모든 데이터를 이 객체로 위임) */
 	UFUNCTION(BlueprintCallable, Category="Weapon")
-	void InitializeFromItemData(class UWeaponItemData* ItemData);
+	void SetWeaponItemData(class UWeaponItemData* ItemData);
+
+	/** WeaponItemData 반환 */
+	UFUNCTION(BlueprintPure, Category="Weapon")
+	class UWeaponItemData* GetWeaponItemData() const { return WeaponItemData; }
+
+	// ========================================
+	// IPickupable 인터페이스 구현
+	// ========================================
+
+	/** 이 무기를 픽업할 수 있는지 확인 */
+	virtual bool CanBePickedUp(AFPSCharacter* Character) override;
+
+	/** 무기 픽업 시 호출 */
+	virtual bool OnPickedUp(AFPSCharacter* Character) override;
+
+	/** 픽업 시 표시할 무기 이름 */
+	virtual FString GetPickupDisplayName() const override;
 };

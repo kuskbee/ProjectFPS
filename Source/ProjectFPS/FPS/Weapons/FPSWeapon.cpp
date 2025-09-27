@@ -3,6 +3,9 @@
 #include "FPSWeapon.h"
 #include "FPSWeaponHolder.h"
 #include "FPS/Items/WeaponItemData.h"
+#include "FPS/Components/PickupTriggerComponent.h"
+#include "FPS/FPSCharacter.h"
+#include "FPS/Components/WeaponSlotComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Animation/AnimInstance.h"
@@ -34,18 +37,21 @@ AFPSWeapon::AFPSWeapon()
 	ThirdPersonMesh->SetFirstPersonPrimitiveType(EFirstPersonPrimitiveType::WorldSpaceRepresentation);
 	ThirdPersonMesh->bOwnerNoSee = true;
 
-	// 기본값 초기화
-	MagazineSize = 10;
-	CurrentBullets = 0;
-	RefireRate = 0.5f;
-	bFullAuto = false;
-	AimVariance = 0.0f;
-	FiringRecoil = 0.0f;
+	// 픽업 트리거 컴포넌트 생성
+	PickupTrigger = CreateDefaultSubobject<UPickupTriggerComponent>(TEXT("PickupTrigger"));
+	PickupTrigger->SetupAttachment(RootComponent);
+	PickupTrigger->SetPickupRange(150.0f);
+	// 기본적으로 픽업 트리거 비활성화 (무기가 스폰될 때는 보통 장착 상태)
+	PickupTrigger->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 기본값 초기화 (WeaponItemData에 없는 것들만)
 	MuzzleOffset = 10.0f;
 	ShotLoudness = 1.0f;
 	ShotNoiseRange = 3000.0f;
 	ShotNoiseTag = FName("Shot");
 	MuzzleSocketName = FName("Muzzle");
+	TimeOfLastShot = 0.0f;
+	bIsFiring = false;
 }
 
 void AFPSWeapon::BeginPlay()
@@ -62,13 +68,16 @@ void AFPSWeapon::BeginPlay()
 	WeaponOwner = Cast<IFPSWeaponHolder>(GetOwner());
 	PawnOwner = Cast<APawn>(GetOwner());
 
-	// 첫 번째 탄창 채우기
-	CurrentBullets = MagazineSize;
+	// WeaponItemData 유효성 검사
+	if (!WeaponItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AFPSWeapon::BeginPlay: WeaponItemData가 설정되지 않았습니다! %s"), *GetName());
+	}
 
 	// HUD 업데이트
-	if (WeaponOwner)
+	if (WeaponOwner && WeaponItemData)
 	{
-		WeaponOwner->UpdateWeaponHUD(CurrentBullets, MagazineSize);
+		WeaponOwner->UpdateWeaponHUD(WeaponItemData->CurrentAmmo, WeaponItemData->MagazineSize);
 	}
 }
 
@@ -122,7 +131,10 @@ void AFPSWeapon::ActivateWeapon()
 	WeaponOwner->OnWeaponActivated(this);
 
 	// HUD 업데이트
-	WeaponOwner->UpdateWeaponHUD(CurrentBullets, MagazineSize);
+	if (WeaponItemData)
+	{
+		WeaponOwner->UpdateWeaponHUD(WeaponItemData->CurrentAmmo, WeaponItemData->MagazineSize);
+	}
 }
 
 void AFPSWeapon::DeactivateWeapon()
@@ -146,8 +158,15 @@ void AFPSWeapon::StartFiring()
 		return;
 	}
 
+	// WeaponItemData 확인
+	if (!WeaponItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("StartFiring: WeaponItemData가 null입니다"));
+		return;
+	}
+
 	// 탄약이 있는지 확인
-	if (CurrentBullets <= 0)
+	if (WeaponItemData->IsAmmoEmpty())
 	{
 		// TODO: 빈 무기 사운드/애니메이션 재생
 		return;
@@ -188,13 +207,13 @@ void AFPSWeapon::StopFiring()
 
 void AFPSWeapon::Fire()
 {
-	if (!WeaponOwner || !bIsFiring)
+	if (!WeaponOwner || !bIsFiring || !WeaponItemData)
 	{
 		return;
 	}
 
 	// 탄약이 있는지 확인
-	if (!ConsumeAmmo())
+	if (!WeaponItemData->ConsumeAmmo())
 	{
 		StopFiring();
 		return;
@@ -213,24 +232,24 @@ void AFPSWeapon::Fire()
 	}
 
 	// 반동 적용
-	if (FiringRecoil > 0.0f)
+	if (WeaponItemData->RecoilStrength > 0.0f)
 	{
-		WeaponOwner->AddWeaponRecoil(FiringRecoil);
+		WeaponOwner->AddWeaponRecoil(WeaponItemData->RecoilStrength);
 	}
 
 	// HUD 업데이트
-	WeaponOwner->UpdateWeaponHUD(CurrentBullets, MagazineSize);
+	WeaponOwner->UpdateWeaponHUD(WeaponItemData->CurrentAmmo, WeaponItemData->MagazineSize);
 
 	// 자동 무기의 연사 처리
-	if (bFullAuto && bIsFiring)
+	if (WeaponItemData->bIsAutomatic && bIsFiring)
 	{
 		// 다음 발사 예약
-		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AFPSWeapon::Fire, RefireRate, false);
+		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AFPSWeapon::Fire, WeaponItemData->GetRefireRate(), false);
 	}
 	else
 	{
 		// 반자동 무기의 경우, 쿨다운 알림 예약
-		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AFPSWeapon::FireCooldownExpired, RefireRate, false);
+		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AFPSWeapon::FireCooldownExpired, WeaponItemData->GetRefireRate(), false);
 	}
 }
 
@@ -294,11 +313,11 @@ FTransform AFPSWeapon::CalculateProjectileSpawnTransform(const FVector& TargetLo
 	}
 
 	// 지정된 경우 조준 분산 적용
-	if (AimVariance > 0.0f)
+	if (WeaponItemData && WeaponItemData->AccuracySpread > 0.0f)
 	{
 		FRotator VarianceRotation = FRotator(
-			FMath::RandRange(-AimVariance, AimVariance),  // Pitch
-			FMath::RandRange(-AimVariance, AimVariance),  // Yaw
+			FMath::RandRange(-WeaponItemData->AccuracySpread, WeaponItemData->AccuracySpread),  // Pitch
+			FMath::RandRange(-WeaponItemData->AccuracySpread, WeaponItemData->AccuracySpread),  // Yaw
 			0.0f                                          // Roll
 		);
 		SpawnRotation += VarianceRotation;
@@ -317,50 +336,110 @@ TSubclassOf<UAnimInstance> AFPSWeapon::GetThirdPersonAnimInstanceClass() const
 	return ThirdPersonAnimInstanceClass;
 }
 
+int32 AFPSWeapon::GetMagazineSize() const
+{
+	return WeaponItemData ? WeaponItemData->MagazineSize : 0;
+}
+
+int32 AFPSWeapon::GetBulletCount() const
+{
+	return WeaponItemData ? WeaponItemData->CurrentAmmo : 0;
+}
+
 void AFPSWeapon::SetCurrentAmmo(int32 NewAmmo)
 {
-	CurrentBullets = FMath::Clamp(NewAmmo, 0, MagazineSize);
+	if (!WeaponItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SetCurrentAmmo: WeaponItemData가 null입니다"));
+		return;
+	}
+
+	WeaponItemData->CurrentAmmo = FMath::Clamp(NewAmmo, 0, WeaponItemData->MagazineSize);
 
 	// HUD 업데이트
 	if (WeaponOwner)
 	{
-		WeaponOwner->UpdateWeaponHUD(CurrentBullets, MagazineSize);
+		WeaponOwner->UpdateWeaponHUD(WeaponItemData->CurrentAmmo, WeaponItemData->MagazineSize);
 	}
 }
 
 bool AFPSWeapon::ConsumeAmmo(int32 AmmoToConsume)
 {
-	if (CurrentBullets >= AmmoToConsume)
+	if (!WeaponItemData)
 	{
-		CurrentBullets -= AmmoToConsume;
-		return true;
+		UE_LOG(LogTemp, Warning, TEXT("ConsumeAmmo: WeaponItemData가 null입니다"));
+		return false;
 	}
 
-	return false;
+	return WeaponItemData->ConsumeAmmo(AmmoToConsume);
 }
 
-void AFPSWeapon::InitializeFromItemData(UWeaponItemData* ItemData)
+
+void AFPSWeapon::SetWeaponItemData(UWeaponItemData* ItemData)
 {
 	if (!ItemData)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("InitializeFromItemData: ItemData가 null입니다!"));
+		UE_LOG(LogTemp, Warning, TEXT("SetWeaponItemData: ItemData가 null입니다!"));
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("무기를 ItemData로 초기화: %s"), *ItemData->GetItemName());
+	WeaponItemData = ItemData;
 
-	// WeaponItemData의 값들을 FPSWeapon에 적용
-	MagazineSize = ItemData->MagazineSize;
-	RefireRate = 1.0f / ItemData->FireRate; // FireRate(초당 발사횟수) -> RefireRate(발사간격)로 변환
-	AimVariance = ItemData->AccuracySpread;
-	FiringRecoil = ItemData->RecoilStrength;
-	bFullAuto = ItemData->bIsAutomatic;
+	// HUD 업데이트
+	if (WeaponOwner)
+	{
+		WeaponOwner->UpdateWeaponHUD(WeaponItemData->CurrentAmmo, WeaponItemData->MagazineSize);
+	}
 
-	// 현재 탄약도 탄창 크기에 맞춰 설정
-	CurrentBullets = MagazineSize;
+	UE_LOG(LogTemp, Log, TEXT("WeaponItemData 설정됨: %s"), *ItemData->GetItemName());
+}
 
-	// TODO: WeaponRange 등 추가 스탯들도 적용
+// ========================================
+// IPickupable 인터페이스 구현
+// ========================================
 
-	UE_LOG(LogTemp, Log, TEXT("무기 초기화 완료 - 탄창:%d, 연사속도:%.2f, 정확도:%.2f"),
-		MagazineSize, RefireRate, AimVariance);
+bool AFPSWeapon::CanBePickedUp(AFPSCharacter* Character)
+{
+	if (!Character)
+	{
+		return false;
+	}
+
+	// WeaponSlotComponent 확인
+	UWeaponSlotComponent* WeaponSlotComp = Character->GetWeaponSlotComponent();
+	if (!WeaponSlotComp)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CanBePickedUp: WeaponSlotComponent를 찾을 수 없습니다"));
+		return false;
+	}
+
+	// 빈 슬롯이 있는지 확인 (모든 슬롯이 차있지 않으면 픽업 가능)
+	return WeaponSlotComp->IsSlotEmpty(EWeaponSlot::Primary) ||
+		   WeaponSlotComp->IsSlotEmpty(EWeaponSlot::Secondary);
+}
+
+bool AFPSWeapon::OnPickedUp(AFPSCharacter* Character)
+{
+	if (!Character || !CanBePickedUp(Character))
+	{
+		return false;
+	}
+
+	// WeaponSlotComponent 가져오기
+	UWeaponSlotComponent* WeaponSlotComp = Character->GetWeaponSlotComponent();
+	if (!WeaponSlotComp)
+	{
+		return false;
+	}
+
+	// TODO: 이 무기에 해당하는 WeaponItemData를 어떻게 가져올지 결정해야 함
+	// 임시로 실패 처리
+	UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: WeaponItemData 연결 시스템이 필요합니다"));
+	return false;
+}
+
+FString AFPSWeapon::GetPickupDisplayName() const
+{
+	// TODO: WeaponItemData에서 이름 가져오기
+	return FString::Printf(TEXT("무기 (%s)"), *GetClass()->GetName());
 }

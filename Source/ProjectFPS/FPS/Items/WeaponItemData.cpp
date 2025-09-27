@@ -17,9 +17,23 @@ UWeaponItemData::UWeaponItemData()
 	RecoilStrength = 1.0f;
 	WeaponRange = 5000.0f;
 	bIsAutomatic = false;
+
+	// 런타임 상태 초기화
+	CurrentAmmo = MagazineSize; // 처음엔 탄약 가득
+	Durability = 100.0f;
 }
 
 bool UWeaponItemData::IsValidWeapon() const
 {
 	return WeaponClass != nullptr;
+}
+
+bool UWeaponItemData::ConsumeAmmo(int32 AmmoToConsume)
+{
+	if (CurrentAmmo >= AmmoToConsume)
+	{
+		CurrentAmmo -= AmmoToConsume;
+		return true;
+	}
+	return false;
 }
