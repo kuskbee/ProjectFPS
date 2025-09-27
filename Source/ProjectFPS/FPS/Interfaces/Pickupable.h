@@ -30,4 +30,10 @@ public:
 
 	/** 픽업 가능할 때 표시할 이름 */
 	virtual FString GetPickupDisplayName() const = 0;
+
+	/** 아이템이 월드에 드롭된 상태인지 확인 (픽업 가능 상태) */
+	virtual bool IsDropped() const = 0;
+
+	/** 아이템의 드롭 상태 설정 */
+	virtual void SetDropped(bool bNewDropped) = 0;
 };

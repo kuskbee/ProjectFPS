@@ -231,4 +231,21 @@ public:
 
 	/** 픽업 시 표시할 무기 이름 */
 	virtual FString GetPickupDisplayName() const override;
+
+	/** 아이템이 월드에 드롭된 상태인지 확인 */
+	virtual bool IsDropped() const override;
+
+	/** 아이템의 드롭 상태 설정 */
+	virtual void SetDropped(bool bNewDropped) override;
+
+	// ========================================
+	// 편의 함수
+	// ========================================
+
+	void SetWeaponOwner(AActor* WeaponHolder);
+
+protected:
+	/** 무기가 월드에 드롭된 상태인지 (픽업 가능한지) */
+	UPROPERTY(BlueprintReadOnly, Category="Pickup")
+	bool bIsDropped = false;
 };

@@ -429,17 +429,87 @@ bool AFPSWeapon::OnPickedUp(AFPSCharacter* Character)
 	UWeaponSlotComponent* WeaponSlotComp = Character->GetWeaponSlotComponent();
 	if (!WeaponSlotComp)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: WeaponSlotComponent를 찾을 수 없습니다"));
 		return false;
 	}
 
-	// TODO: 이 무기에 해당하는 WeaponItemData를 어떻게 가져올지 결정해야 함
-	// 임시로 실패 처리
-	UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: WeaponItemData 연결 시스템이 필요합니다"));
-	return false;
+	// 빈 슬롯 찾기 (Primary 우선, 없으면 Secondary)
+	EWeaponSlot TargetSlot = EWeaponSlot::Primary;
+	if (!WeaponSlotComp->IsSlotEmpty(EWeaponSlot::Primary))
+	{
+		if (!WeaponSlotComp->IsSlotEmpty(EWeaponSlot::Secondary))
+		{
+			//:TODO: 슬롯이 꽉찬 경우 인벤토리 이동 (추후 인벤토리 작업 후 처리)
+			UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: 모든 슬롯이 차있습니다"));
+			return false;
+		}
+		TargetSlot = EWeaponSlot::Secondary;
+	}
+
+	// 무기 장착 시도
+	bool bSuccess = WeaponSlotComp->EquipExistingWeaponToSlot(TargetSlot, this);
+	if (bSuccess)
+	{
+		UE_LOG(LogTemp, Log, TEXT("무기 픽업 성공: %s를 %s 슬롯에 장착"),
+			*GetPickupDisplayName(),
+			TargetSlot == EWeaponSlot::Primary ? TEXT("Primary") : TEXT("Secondary"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("무기 픽업 실패: %s"), *GetPickupDisplayName());
+	}
+
+	return bSuccess;
 }
 
 FString AFPSWeapon::GetPickupDisplayName() const
 {
 	// TODO: WeaponItemData에서 이름 가져오기
 	return FString::Printf(TEXT("무기 (%s)"), *GetClass()->GetName());
+}
+
+bool AFPSWeapon::IsDropped() const
+{
+	return bIsDropped;
+}
+
+void AFPSWeapon::SetDropped(bool bNewDropped)
+{
+	bIsDropped = bNewDropped;
+
+	// 픽업 트리거 활성화/비활성화
+	if (PickupTrigger)
+	{
+		if (bIsDropped)
+		{
+			PickupTrigger->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+			UE_LOG(LogTemp, Log, TEXT("무기 %s: 드롭 상태로 변경, 픽업 트리거 활성화"), *GetName());
+		}
+		else
+		{
+			PickupTrigger->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			UE_LOG(LogTemp, Log, TEXT("무기 %s: 장착 상태로 변경, 픽업 트리거 비활성화"), *GetName());
+		}
+	}
+}
+
+void AFPSWeapon::SetWeaponOwner(AActor* WeaponHolder)
+{
+	if (!WeaponHolder)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SetWeaponOwner의 Owner가 null입니다!"));
+		return;
+	}
+
+	IFPSWeaponHolder* Holder = Cast<IFPSWeaponHolder>(WeaponHolder);
+	if (!Holder)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Owner는 IFPSWeaponHolder로 구현되지 않았습니다."));
+		return;
+	}
+
+	SetOwner(WeaponHolder);
+	SetInstigator(Cast<APawn>(WeaponHolder));
+	WeaponOwner = Holder;
+	PawnOwner = Cast<APawn>(WeaponHolder);
 }

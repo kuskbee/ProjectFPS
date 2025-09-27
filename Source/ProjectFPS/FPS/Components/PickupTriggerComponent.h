@@ -35,12 +35,17 @@ protected:
 	bool bShowPickupMessage = true;
 
 public:
-	/** Overlap 시작 시 호출 */
+	/** Overlap 시작 시 호출 - UI 표시용 */
 	UFUNCTION()
 	void OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	/** 픽업 처리 */
+	/** Overlap 종료 시 호출 - UI 숨김용 */
+	UFUNCTION()
+	void OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
+	/** 픽업 처리 (FPSCharacter의 E키에서 호출) */
 	UFUNCTION(BlueprintCallable, Category = "Pickup")
 	bool TryPickup(AFPSCharacter* Character);
 

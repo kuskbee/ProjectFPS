@@ -19,6 +19,8 @@
 #include "Animation/AnimMontage.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "FPS/Interfaces/Pickupable.h"
 
 // 기본값 설정
 AFPSCharacter::AFPSCharacter()
@@ -166,6 +168,12 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		if (SecondaryWeaponAction)
 		{
 			EnhancedInputComponent->BindAction(SecondaryWeaponAction, ETriggerEvent::Triggered, this, &AFPSCharacter::SwitchToSecondaryWeapon);
+		}
+
+		// 아이템 픽업 (E키)
+		if (PickupAction)
+		{
+			EnhancedInputComponent->BindAction(PickupAction, ETriggerEvent::Triggered, this, &AFPSCharacter::TryPickupItem);
 		}
 	}
 }
@@ -567,5 +575,82 @@ void AFPSCharacter::GiveDefaultWeapon()
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("기본 무기 클래스가 설정되지 않음!"));
+	}
+}
+
+void AFPSCharacter::TryPickupItem(const FInputActionValue& Value)
+{
+	// E키가 눌렸는지 확인
+	const bool bPressed = Value.Get<bool>();
+	if (!bPressed)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("E키 픽업 시도"));
+
+	// 플레이어 위치에서 SphereTrace 수행
+	FVector PlayerLocation = GetActorLocation();
+	float PickupRange = 200.0f; // 픽업 범위
+
+	 // 오브젝트 타입 필터
+    TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
+    ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECC_WorldDynamic));
+
+	// 충돌 무시 액터 설정
+	TArray<AActor*> ActorsToIgnore;
+	ActorsToIgnore.Add(this);
+
+	// 오버랩 결과
+    TArray<AActor*> OutActors;
+    const bool bAny = UKismetSystemLibrary::SphereOverlapActors(
+        GetWorld(),
+        PlayerLocation,
+        PickupRange,
+        ObjectTypes,
+        /*ClassFilter=*/AActor::StaticClass(),
+        ActorsToIgnore,
+        OutActors
+    );
+
+    if (!bAny)
+    {
+        UE_LOG(LogTemp, Log, TEXT("주변에 픽업 가능한 아이템이 없습니다"));
+        return;
+    }
+
+	// 가장 가까운 Pickupable 아이템 고르기 (+ 상태 체크)
+	IPickupable* ClosestPickupable = nullptr;
+	float ClosestDistance = FLT_MAX;
+
+	for (AActor* OverlapActor : OutActors)
+	{
+		if (OverlapActor)
+		{
+			if (IPickupable* Pickupable = Cast<IPickupable>(OverlapActor))
+			{
+				// 드롭된 상태인 아이템만 고려
+				if (Pickupable->IsDropped())
+				{
+					float Distance = FVector::Dist(PlayerLocation, OverlapActor->GetActorLocation());
+					if (Distance < ClosestDistance)
+					{
+						ClosestDistance = Distance;
+						ClosestPickupable = Pickupable;
+					}
+				}
+			}
+		}
+	}
+	
+	// 가장 가까운 아이템 픽업 시도
+	if (ClosestPickupable)
+	{
+		UE_LOG(LogTemp, Log, TEXT("가장 가까운 아이템 픽업 시도: %s"), *ClosestPickupable->GetPickupDisplayName());
+		ClosestPickupable->OnPickedUp(this);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("픽업 가능한 아이템을 찾을 수 없습니다"));
 	}
 }

@@ -62,6 +62,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Weapon Slots")
 	bool EquipWeaponToSlot(EWeaponSlot SlotType, UWeaponItemData* WeaponItem);
 
+	/** 이미 스폰된 무기를 빈 슬롯에 장착 (픽업용) */
+	UFUNCTION(BlueprintCallable, Category = "Weapon Slots")
+	bool EquipExistingWeaponToSlot(EWeaponSlot SlotType, AFPSWeapon* ExistingWeapon);
+
 	/** 슬롯에서 무기 해제 (아이템 데이터 반환, 무기 액터는 정리) */
 	UFUNCTION(BlueprintCallable, Category = "Weapon Slots")
 	UWeaponItemData* UnequipWeaponFromSlot(EWeaponSlot SlotType);

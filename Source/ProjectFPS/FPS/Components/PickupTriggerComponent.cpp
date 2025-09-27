@@ -29,6 +29,7 @@ void UPickupTriggerComponent::BeginPlay()
 
 	// Overlap 이벤트 바인딩
 	OnComponentBeginOverlap.AddDynamic(this, &UPickupTriggerComponent::OnSphereBeginOverlap);
+	OnComponentEndOverlap.AddDynamic(this, &UPickupTriggerComponent::OnSphereEndOverlap);
 
 	// 소유자가 IPickupable을 구현하는지 확인
 	if (!GetPickupableOwner())
@@ -41,11 +42,40 @@ void UPickupTriggerComponent::BeginPlay()
 void UPickupTriggerComponent::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// FPSCharacter인지 확인
+	// FPSCharacter이고 PlayerController가 있는지 확인 (플레이어만)
 	if (AFPSCharacter* Character = Cast<AFPSCharacter>(OtherActor))
 	{
-		// 픽업 시도
-		TryPickup(Character);
+		// AI 캐릭터는 제외하고 플레이어만
+		if (Cast<APlayerController>(Character->GetController()))
+		{
+			// 아이템이 픽업 가능한 상태인지 확인
+			IPickupable* PickupableOwner = GetPickupableOwner();
+			if (PickupableOwner && PickupableOwner->IsDropped())
+			{
+				// TODO: UI 표시 ("E키로 픽업" 메시지)
+				if (GEngine)
+				{
+					GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Yellow,
+						FString::Printf(TEXT("[E] %s"), *PickupableOwner->GetPickupDisplayName()));
+				}
+				UE_LOG(LogTemp, Log, TEXT("픽업 UI 표시: %s"), *PickupableOwner->GetPickupDisplayName());
+			}
+		}
+	}
+}
+
+void UPickupTriggerComponent::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+	// FPSCharacter이고 PlayerController가 있는지 확인 (플레이어만)
+	if (AFPSCharacter* Character = Cast<AFPSCharacter>(OtherActor))
+	{
+		// AI 캐릭터는 제외하고 플레이어만
+		if (Cast<APlayerController>(Character->GetController()))
+		{
+			// TODO: UI 숨김 처리
+			UE_LOG(LogTemp, Log, TEXT("픽업 UI 숨김"));
+		}
 	}
 }
 
@@ -69,6 +99,13 @@ bool UPickupTriggerComponent::TryPickup(AFPSCharacter* Character)
 	if (!PickupableOwner)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("TryPickup: 소유자가 IPickupable을 구현하지 않습니다"));
+		return false;
+	}
+
+	// 드롭 상태인지 확인
+	if (!PickupableOwner->IsDropped())
+	{
+		UE_LOG(LogTemp, Log, TEXT("TryPickup: 아이템이 드롭 상태가 아닙니다"));
 		return false;
 	}
 

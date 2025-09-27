@@ -66,6 +66,7 @@ public:
 	void SwitchWeaponSlot(const FInputActionValue& Value);
 	void SwitchToPrimaryWeapon(const FInputActionValue& Value);
 	void SwitchToSecondaryWeapon(const FInputActionValue& Value);
+	void TryPickupItem(const FInputActionValue& Value);
 
 	// IFPSWeaponHolder 인터페이스 구현
 	virtual void AttachWeaponMeshes(AFPSWeapon* Weapon) override;
@@ -167,4 +168,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> SecondaryWeaponAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> PickupAction;
 };

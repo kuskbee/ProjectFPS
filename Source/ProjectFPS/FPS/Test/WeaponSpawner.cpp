@@ -110,6 +110,9 @@ AFPSWeapon* AWeaponSpawner::SpawnWeapon()
 	NewWeapon->SetActorHiddenInGame(false);
 	NewWeapon->SetActorEnableCollision(true);
 
+	// 무기를 드롭된 상태로 설정 (픽업 가능하게)
+	NewWeapon->SetDropped(true);
+
 	// TODO: WeaponItemData를 무기와 연결하는 시스템 필요
 	// 임시로 무기에 직접 WeaponItemData 저장하는 방법을 구현해야 함
 

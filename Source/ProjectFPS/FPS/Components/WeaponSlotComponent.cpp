@@ -129,6 +129,67 @@ bool UWeaponSlotComponent::EquipWeaponToSlot(EWeaponSlot SlotType, UWeaponItemDa
 	return true;
 }
 
+bool UWeaponSlotComponent::EquipExistingWeaponToSlot(EWeaponSlot SlotType, AFPSWeapon* ExistingWeapon)
+{
+	if (!ExistingWeapon)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EquipWeaponToSlot: ExistingWeapon이 null입니다"));
+		return false;
+	}
+
+	// WeaponItemData 확인
+	UWeaponItemData* WeaponItemData = ExistingWeapon->GetWeaponItemData();
+	if (!WeaponItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EquipWeaponToSlot: 무기에 WeaponItemData가 없습니다"));
+		return false;
+	}
+
+	int32 SlotIndex = SlotTypeToIndex(SlotType);
+	if (!IsValidSlotIndex(SlotIndex))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EquipWeaponToSlot: 잘못된 슬롯 타입입니다"));
+		return false;
+	}
+
+	// 슬롯이 이미 차있는지 확인
+	if (!IsSlotEmpty(SlotType))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EquipWeaponToSlot: 슬롯이 이미 차있습니다. 먼저 비워주세요."));
+		return false;
+	}
+
+	// 무기 Owner 설정
+	ExistingWeapon->SetWeaponOwner(GetOwner());
+
+	// 무기를 장착된 상태로 설정 (픽업 불가능하게)
+	ExistingWeapon->SetDropped(false);
+
+	// 슬롯에 저장
+	WeaponSlots[SlotIndex] = WeaponItemData;
+	SpawnedWeapons[SlotIndex] = ExistingWeapon;
+
+	// 현재 활성 슬롯이 아니면 숨기기
+	if (SlotIndex != ActiveSlotIndex)
+	{
+		ExistingWeapon->SetActorHiddenInGame(true);
+		ExistingWeapon->SetActorEnableCollision(false);
+	}
+	else
+	{
+		// 현재 활성 슬롯이면 Weapon을 활성화 
+		ExistingWeapon->ActivateWeapon();
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("기존 무기 장착 완료: %s를 %d번 슬롯에"),
+		*WeaponItemData->GetItemName(), SlotIndex);
+
+	// 델리게이트 호출
+	OnWeaponEquipped.Broadcast(SlotType, WeaponItemData, ExistingWeapon);
+
+	return true;
+}
+
 UWeaponItemData* UWeaponSlotComponent::UnequipWeaponFromSlot(EWeaponSlot SlotType)
 {
 	int32 SlotIndex = SlotTypeToIndex(SlotType);
