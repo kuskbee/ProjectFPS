@@ -105,6 +105,12 @@ bool UWeaponSlotComponent::EquipWeaponToSlot(EWeaponSlot SlotType, UWeaponItemDa
 		UE_LOG(LogTemp, Log, TEXT("무기 장착 - 픽업 트리거 비활성화: %s"), *NewWeapon->GetName());
 	}
 
+	// 활성 슬롯이 아니어도 무기 메시는 부착 (픽업한 무기와 동일하게 처리)
+	if (WeaponHolder)
+	{
+		WeaponHolder->AttachWeaponMeshes(NewWeapon);
+	}
+
 	// 현재 활성 슬롯이 아니면 숨기기
 	if (SlotIndex != ActiveSlotIndex)
 	{
@@ -113,11 +119,8 @@ bool UWeaponSlotComponent::EquipWeaponToSlot(EWeaponSlot SlotType, UWeaponItemDa
 	}
 	else
 	{
-		// 현재 활성 슬롯이면 WeaponHolder와 연동
-		if (WeaponHolder)
-		{
-			WeaponHolder->OnWeaponActivated(NewWeapon);
-		}
+		// 현재 활성 슬롯이면 활성화
+		NewWeapon->ActivateWeapon();
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("무기 장착 완료: %s를 %d번 슬롯에"),
@@ -174,6 +177,11 @@ bool UWeaponSlotComponent::EquipExistingWeaponToSlot(EWeaponSlot SlotType, AFPSW
 	{
 		ExistingWeapon->SetActorHiddenInGame(true);
 		ExistingWeapon->SetActorEnableCollision(false);
+		IFPSWeaponHolder* Holder = Cast<IFPSWeaponHolder>(GetOwner());
+		if (Holder)
+		{
+			Holder->AttachWeaponMeshes(ExistingWeapon);
+		}
 	}
 	else
 	{

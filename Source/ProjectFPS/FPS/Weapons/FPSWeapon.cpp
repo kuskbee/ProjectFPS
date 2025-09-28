@@ -422,6 +422,7 @@ bool AFPSWeapon::OnPickedUp(AFPSCharacter* Character)
 {
 	if (!Character || !CanBePickedUp(Character))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: 장착할 수 없는 상태입니다!"));
 		return false;
 	}
 
