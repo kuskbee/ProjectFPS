@@ -137,10 +137,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Weapons")
 	virtual void GiveDefaultWeapon();
 
-	/** 기본으로 지급할 무기 클래스 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Weapons")
-	TSubclassOf<AFPSWeapon> DefaultWeaponClass;
-
 	// 입력
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;

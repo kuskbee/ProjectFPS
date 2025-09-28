@@ -9,6 +9,7 @@
 
 class AFPSWeapon;
 class UAnimMontage;
+class UWeaponItemData;
 
 /**
  * AI가 조종하는 적 캐릭터 - AFPSCharacter 상속
@@ -45,6 +46,9 @@ protected:
 
 	FTimerHandle DeathTimer;
 
+	/** AI 전용: 기본 무기 데이터 (WeaponItemData 기반) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Weapon")
+	TSubclassOf<UWeaponItemData> DefaultWeaponData;
 
 public:
 	// IFPSWeaponHolder 인터페이스 구현

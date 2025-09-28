@@ -4,6 +4,7 @@
 #include "FPS/AI/FPSEnemyAIController.h"
 #include "FPS/Weapons/FPSWeapon.h"
 #include "FPS/Components/WeaponSlotComponent.h"
+#include "FPS/Items/WeaponItemData.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -45,6 +46,9 @@ AFPSEnemyCharacter::AFPSEnemyCharacter()
 void AFPSEnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// AI 캐릭터에게 기본 무기 지급
+	GiveDefaultWeapon();
 }
 
 void AFPSEnemyCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
@@ -236,15 +240,43 @@ void AFPSEnemyCharacter::OnSemiWeaponRefire()
 
 void AFPSEnemyCharacter::GiveDefaultWeapon()
 {
-	if (DefaultWeaponClass)
+	if (!DefaultWeaponData)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("적에게 기본 무기 지급: %s"), *DefaultWeaponClass->GetName());
-		// 부모 클래스의 AddWeaponClass 호출
-		Super::AddWeaponClass(DefaultWeaponClass);
+		UE_LOG(LogTemp, Warning, TEXT("적의 기본 무기 데이터가 설정되지 않음!"));
+		return;
+	}
+
+	if (!WeaponSlotComponent)
+	{
+		UE_LOG(LogTemp, Error, TEXT("적에게 WeaponSlotComponent가 없음!"));
+		return;
+	}
+
+	// WeaponItemData 인스턴스 생성
+	UWeaponItemData* WeaponDataInstance = NewObject<UWeaponItemData>(this, DefaultWeaponData);
+	if (!WeaponDataInstance)
+	{
+		UE_LOG(LogTemp, Error, TEXT("WeaponItemData 인스턴스 생성 실패!"));
+		return;
+	}
+
+	// Primary 슬롯에 무기 장착
+	bool bEquipSuccess = WeaponSlotComponent->EquipWeaponToSlot(EWeaponSlot::Primary, WeaponDataInstance);
+	if (!bEquipSuccess)
+	{
+		UE_LOG(LogTemp, Error, TEXT("적의 무기 장착 실패: %s"), *DefaultWeaponData->GetName());
+		return;
+	}
+
+	// Primary 슬롯 활성화 (즉시 무기 사용 가능하게)
+	bool bSwitchSuccess = WeaponSlotComponent->SwitchToSlot(EWeaponSlot::Primary);
+	if (bSwitchSuccess)
+	{
+		UE_LOG(LogTemp, Log, TEXT("AI 캐릭터에게 무기 지급 및 활성화 완료: %s"), *DefaultWeaponData->GetName());
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("적의 기본 무기 클래스가 설정되지 않음!"));
+		UE_LOG(LogTemp, Warning, TEXT("무기 장착은 성공했지만 활성화 실패"));
 	}
 }
 

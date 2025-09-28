@@ -121,9 +121,6 @@ void AFPSCharacter::BeginPlay()
 			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(FireAbility, 1, 0, this));
 		}
 	}
-
-	//:TEST:
-	GiveDefaultWeapon();
 }
 
 // 매 프레임 호출
@@ -565,17 +562,8 @@ void AFPSCharacter::SwitchToSecondaryWeapon(const FInputActionValue& Value)
 
 void AFPSCharacter::GiveDefaultWeapon()
 {
-	// TODO: 나중에 WeaponItemData 시스템으로 교체
-	// 현재는 임시로 레거시 함수 유지
-	if (DefaultWeaponClass)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("기본 무기 지급 (레거시): %s"), *DefaultWeaponClass->GetName());
-		UE_LOG(LogTemp, Warning, TEXT("WeaponSlotComponent와 WeaponItemData 시스템으로 교체 필요"));
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("기본 무기 클래스가 설정되지 않음!"));
-	}
+	//
+	UE_LOG(LogTemp, Warning, TEXT("GiveDefaultWeapon() - 테스트"));
 }
 
 void AFPSCharacter::TryPickupItem(const FInputActionValue& Value)
