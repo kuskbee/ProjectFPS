@@ -21,6 +21,9 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "FPS/Interfaces/Pickupable.h"
+#include "FPS/UI/WeaponHUD.h"
+#include "FPS/Items/WeaponItemData.h"
+#include "Blueprint/UserWidget.h"
 
 // 기본값 설정
 AFPSCharacter::AFPSCharacter()
@@ -119,6 +122,24 @@ void AFPSCharacter::BeginPlay()
 		if (HasAuthority() && FireAbility)
 		{
 			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(FireAbility, 1, 0, this));
+		}
+	}
+
+	// WeaponHUD 생성 (플레이어 캐릭터인 경우에만)
+	if (IsPlayerControlled() && WeaponHUDClass)
+	{
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			WeaponHUDWidget = CreateWidget<UWeaponHUD>(PC, WeaponHUDClass);
+			if (WeaponHUDWidget)
+			{
+				WeaponHUDWidget->AddToViewport();
+				UE_LOG(LogTemp, Log, TEXT("WeaponHUD 생성 및 화면에 추가 완료"));
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("WeaponHUD 생성 실패"));
+			}
 		}
 	}
 }
@@ -433,9 +454,52 @@ void AFPSCharacter::AddWeaponRecoil(float Recoil)
 
 void AFPSCharacter::UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize)
 {
-	// TODO: 탄약 정보로 HUD/UI 업데이트
-	// 보통 UMG 위젯을 업데이트함
-	UE_LOG(LogTemp, Log, TEXT("Ammo: %d/%d"), CurrentAmmo, MagazineSize);
+	if (!WeaponHUDWidget)
+	{
+		return;
+	}
+
+	// 탄약 정보 업데이트
+	WeaponHUDWidget->UpdateAmmoDisplay(CurrentAmmo, MagazineSize);
+
+	// 현재 무기 이름도 업데이트
+	if (WeaponSlotComponent)
+	{
+		if (AFPSWeapon* CurrentWeapon = WeaponSlotComponent->GetCurrentWeaponActor())
+		{
+			if (UWeaponItemData* WeaponData = CurrentWeapon->GetWeaponItemData())
+			{
+				WeaponHUDWidget->UpdateWeaponName(WeaponData->GetItemName());
+			}
+		}
+		else
+		{
+			WeaponHUDWidget->UpdateWeaponName("");
+		}
+
+		// 슬롯 상태도 업데이트
+		FString PrimaryWeaponName = "";
+		FString SecondaryWeaponName = "";
+
+		if (UWeaponItemData* PrimaryData = WeaponSlotComponent->GetWeaponInSlot(EWeaponSlot::Primary))
+		{
+			PrimaryWeaponName = PrimaryData->GetItemName();
+		}
+
+		if (UWeaponItemData* SecondaryData = WeaponSlotComponent->GetWeaponInSlot(EWeaponSlot::Secondary))
+		{
+			SecondaryWeaponName = SecondaryData->GetItemName();
+		}
+
+		int32 ActiveSlotNumber = 0;
+		EWeaponSlot CurrentSlot = WeaponSlotComponent->GetActiveSlot();
+		if (CurrentSlot == EWeaponSlot::Primary) ActiveSlotNumber = 1;
+		else if (CurrentSlot == EWeaponSlot::Secondary) ActiveSlotNumber = 2;
+
+		WeaponHUDWidget->UpdateWeaponSlots(PrimaryWeaponName, SecondaryWeaponName, ActiveSlotNumber);
+	}
+
+	UE_LOG(LogTemp, VeryVerbose, TEXT("WeaponHUD 업데이트: %d/%d"), CurrentAmmo, MagazineSize);
 }
 
 FVector AFPSCharacter::GetWeaponTargetLocation()

@@ -149,6 +149,8 @@ void AFPSWeapon::DeactivateWeapon()
 
 	// 무기가 비활성화되었음을 소유자에게 알림
 	WeaponOwner->OnWeaponDeactivated(this);
+
+
 }
 
 void AFPSWeapon::StartFiring()

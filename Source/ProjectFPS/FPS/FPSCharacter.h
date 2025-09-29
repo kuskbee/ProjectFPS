@@ -22,6 +22,7 @@ class AFPSWeapon;
 class UAnimMontage;
 class UGameplayEffect;
 class UWeaponSlotComponent;
+class UWeaponHUD;
 
 UCLASS()
 class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInterface, public IFPSWeaponHolder
@@ -120,6 +121,15 @@ protected:
 	// 기본 애니메이션 인스턴스 클래스들 (무기 비활성화 시 복원용)
 	TSubclassOf<UAnimInstance> DefaultFirstPersonAnimClass;
 	TSubclassOf<UAnimInstance> DefaultThirdPersonAnimClass;
+
+	// UI 관련
+	/** WeaponHUD 위젯 클래스 (Blueprint에서 설정) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UWeaponHUD> WeaponHUDClass;
+
+	/** 현재 활성화된 WeaponHUD 인스턴스 */
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UWeaponHUD> WeaponHUDWidget;
 
 public:
 

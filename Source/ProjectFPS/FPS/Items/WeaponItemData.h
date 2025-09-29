@@ -65,6 +65,11 @@ public:
 	float Durability = 100.0f;
 
 public:
+#if WITH_EDITOR
+	/** 에디터에서 프로퍼티 변경 시 호출 (MagazineSize 변경 시 CurrentAmmo 동기화) */
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
 	/** 무기 클래스가 유효한지 확인 */
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	bool IsValidWeapon() const;

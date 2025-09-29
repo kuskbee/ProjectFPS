@@ -129,6 +129,9 @@ bool UWeaponSlotComponent::EquipWeaponToSlot(EWeaponSlot SlotType, UWeaponItemDa
 	// 델리게이트 호출
 	OnWeaponEquipped.Broadcast(SlotType, WeaponItem, NewWeapon);
 
+	// HUD 업데이트
+	UpdateWeaponHUD();
+
 	return true;
 }
 
@@ -195,6 +198,9 @@ bool UWeaponSlotComponent::EquipExistingWeaponToSlot(EWeaponSlot SlotType, AFPSW
 	// 델리게이트 호출
 	OnWeaponEquipped.Broadcast(SlotType, WeaponItemData, ExistingWeapon);
 
+	// HUD 업데이트
+	UpdateWeaponHUD();
+
 	return true;
 }
 
@@ -235,6 +241,9 @@ UWeaponItemData* UWeaponSlotComponent::UnequipWeaponFromSlot(EWeaponSlot SlotTyp
 
 	// 델리게이트 호출
 	OnWeaponUnequipped.Broadcast(SlotType, WeaponItem);
+
+	// HUD 업데이트
+	UpdateWeaponHUD();
 
 	return WeaponItem;
 }
@@ -351,6 +360,9 @@ bool UWeaponSlotComponent::SwitchToSlot(EWeaponSlot SlotType)
 	// 델리게이트 호출
 	OnWeaponSlotChanged.Broadcast(OldSlot, SlotType);
 
+	// HUD 업데이트
+	UpdateWeaponHUD();
+
 	return true;
 }
 
@@ -439,6 +451,23 @@ void UWeaponSlotComponent::ShowCurrentWeapon(bool bMakeVisible)
 	}
 
 	ShowWeapon(CurrentWeapon, bMakeVisible);
+}
+
+void UWeaponSlotComponent::UpdateWeaponHUD()
+{
+	if (WeaponHolder)
+	{
+		UWeaponItemData* ActiveWeaponItem = GetActiveWeaponItem();
+		if (ActiveWeaponItem)
+		{
+			WeaponHolder->UpdateWeaponHUD(ActiveWeaponItem->CurrentAmmo, ActiveWeaponItem->MagazineSize);
+		}
+		else
+		{
+			WeaponHolder->UpdateWeaponHUD(-1, -1);
+		}
+		
+	}
 }
 
 // ========================================

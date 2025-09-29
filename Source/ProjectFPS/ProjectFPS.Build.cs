@@ -38,7 +38,8 @@ public class ProjectFPS : ModuleRules
 			"ProjectFPS/Variant_Shooter/Weapons",
             "ProjectFPS/FPS",
             "ProjectFPS/FPS/AI",
-            "ProjectFPS/FPS/Weapons"
+            "ProjectFPS/FPS/Weapons",
+            "ProjectFPS/FPS/UI"
         });
 
 		// Uncomment if you are using Slate UI

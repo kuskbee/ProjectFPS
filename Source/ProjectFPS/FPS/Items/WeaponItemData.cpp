@@ -28,6 +28,20 @@ bool UWeaponItemData::IsValidWeapon() const
 	return WeaponClass != nullptr;
 }
 
+#if WITH_EDITOR
+void UWeaponItemData::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+	Super::PostEditChangeProperty(PropertyChangedEvent);
+
+	// MagazineSize가 변경되면 CurrentAmmo도 동기화
+	if (PropertyChangedEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(UWeaponItemData, MagazineSize))
+	{
+		CurrentAmmo = MagazineSize;
+		UE_LOG(LogTemp, Log, TEXT("MagazineSize 변경 감지: CurrentAmmo를 %d로 동기화"), CurrentAmmo);
+	}
+}
+#endif
+
 bool UWeaponItemData::ConsumeAmmo(int32 AmmoToConsume)
 {
 	if (CurrentAmmo >= AmmoToConsume)

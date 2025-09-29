@@ -129,6 +129,9 @@ public:
 	/** 현재 무기를 보이기/숨기기 **/
 	void ShowCurrentWeapon(bool bMakeVisible);
 
+	/** WeaponHolder의 HUD 업데이트 (무기 상태 변경 시 호출) */
+	void UpdateWeaponHUD();
+
 protected:
 	// ========================================
 	// 내부 구현 함수들
