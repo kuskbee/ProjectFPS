@@ -66,6 +66,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
 	TObjectPtr<UAnimMontage> FiringMontage;
 
+	/** 이 무기 리로드 시 재생할 애니메이션 몽타주 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
+	TObjectPtr<UAnimMontage> ReloadMontage;
+
 	/** 이 무기가 활성화될 때 1인칭 캐릭터 메시에 설정할 AnimInstance 클래스 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Animation")
 	TSubclassOf<UAnimInstance> FirstPersonAnimInstanceClass;
@@ -202,6 +206,10 @@ public:
 	/** 이 무기의 발사체 클래스 반환 */
 	UFUNCTION(BlueprintPure, Category="Weapon")
 	TSubclassOf<AActor> GetProjectileClass() const { return ProjectileClass; }
+
+	/** 리로드 애니메이션 몽타주 반환 */
+	UFUNCTION(BlueprintPure, Category="Weapon")
+	UAnimMontage* GetReloadMontage() const { return ReloadMontage; }
 
 	/** 현재 탄약 설정 (WeaponItemData에 위임) */
 	UFUNCTION(BlueprintCallable, Category="Weapon")

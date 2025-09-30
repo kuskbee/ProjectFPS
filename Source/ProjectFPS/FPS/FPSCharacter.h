@@ -68,10 +68,12 @@ public:
 	void SwitchToPrimaryWeapon(const FInputActionValue& Value);
 	void SwitchToSecondaryWeapon(const FInputActionValue& Value);
 	void TryPickupItem(const FInputActionValue& Value);
+	void ReloadPressed(const FInputActionValue& Value);
 
 	// IFPSWeaponHolder 인터페이스 구현
 	virtual void AttachWeaponMeshes(AFPSWeapon* Weapon) override;
 	virtual void PlayFiringMontage(UAnimMontage* Montage) override;
+	virtual void PlayReloadMontage(UAnimMontage* Montage) override;
 	virtual void AddWeaponRecoil(float Recoil) override;
 	virtual void UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize) override;
 	virtual FVector GetWeaponTargetLocation() override;
@@ -79,6 +81,10 @@ public:
 	virtual void OnWeaponActivated(AFPSWeapon* Weapon) override;
 	virtual void OnWeaponDeactivated(AFPSWeapon* Weapon) override;
 	virtual void OnSemiWeaponRefire() override;
+
+	// 1인칭 메시 접근자
+	UFUNCTION(BlueprintCallable, Category = "Character")
+	USkeletalMeshComponent* GetFirstPersonMesh() const { return FirstPersonMesh; }
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category= "Components", meta = (AllowPrivateAccess = "true"))
@@ -132,10 +138,6 @@ protected:
 	TObjectPtr<UWeaponHUD> WeaponHUDWidget;
 
 public:
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
-	TSubclassOf<UGameplayAbility> FireAbility;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TSubclassOf<UGameplayEffect> HealEffect;
 
@@ -177,4 +179,11 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> PickupAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> ReloadAction;
+
+	/** 게임 시작 시 자동으로 부여할 어빌리티들 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 };

@@ -32,6 +32,9 @@ public:
 	/** 무기 발사 몽타주 재생 */
 	virtual void PlayFiringMontage(UAnimMontage* Montage) = 0;
 
+	/** 무기 리로드 몽타주 재생 */
+	virtual void PlayReloadMontage(UAnimMontage* Montage) = 0;
+
 	/** 소유자에게 무기 반동 적용 */
 	virtual void AddWeaponRecoil(float Recoil) = 0;
 

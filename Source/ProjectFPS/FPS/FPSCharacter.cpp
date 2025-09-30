@@ -6,6 +6,7 @@
 #include "FPS/Weapons/FPSWeapon.h"
 #include "FPS/Components/WeaponSlotComponent.h"
 #include "AbilitySystemComponent.h"
+#include "GameplayTagContainer.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Camera/CameraComponent.h"
@@ -119,9 +120,18 @@ void AFPSCharacter::BeginPlay()
 		// Health 속성 변경에 바인딩
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCharacterAttributeSet::GetHealthAttribute()).AddUObject(this, &AFPSCharacter::OnHealthChanged);
 
-		if (HasAuthority() && FireAbility)
+		// 기본 어빌리티들 부여
+		if (HasAuthority())
 		{
-			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(FireAbility, 1, 0, this));
+			for (const auto& AbilityClass : DefaultAbilities)
+			{
+				if (AbilityClass)
+				{
+					FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
+					AbilitySystemComponent->GiveAbility(AbilitySpec);
+					UE_LOG(LogTemp, Log, TEXT("어빌리티 부여: %s"), *AbilityClass->GetName());
+				}
+			}
 		}
 	}
 
@@ -192,6 +202,12 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		if (PickupAction)
 		{
 			EnhancedInputComponent->BindAction(PickupAction, ETriggerEvent::Triggered, this, &AFPSCharacter::TryPickupItem);
+		}
+
+		// 리로드 (R키)
+		if (ReloadAction)
+		{
+			EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AFPSCharacter::ReloadPressed);
 		}
 	}
 }
@@ -346,10 +362,17 @@ void AFPSCharacter::FireAbilityPressed(const FInputActionValue& Value)
 				CurrentWeapon->StartFiring();
 			}
 		}
-		// 하위 호환성을 위해 기존 직접 어빌리티 활성화로 폴백
-		else if (AbilitySystemComponent && FireAbility)
+		// 하위 호환성을 위해 태그 기반 어빌리티 활성화로 폴백
+		else if (AbilitySystemComponent)
 		{
-			AbilitySystemComponent->TryActivateAbilityByClass(FireAbility);
+			bool bSuccess = AbilitySystemComponent->TryActivateAbilitiesByTag(
+				FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Fire")))
+			);
+
+			if (!bSuccess)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("FireAbilityPressed: 발사 어빌리티 활성화 실패"));
+			}
 		}
 	}
 	else
@@ -440,6 +463,39 @@ void AFPSCharacter::PlayFiringMontage(UAnimMontage* Montage)
 	if (GetMesh() && GetMesh()->GetAnimInstance())
 	{
 		GetMesh()->GetAnimInstance()->Montage_Play(Montage);
+	}
+}
+
+void AFPSCharacter::PlayReloadMontage(UAnimMontage* Montage)
+{
+	if (!Montage)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AFPSCharacter::PlayReloadMontage: 몽타주가 null입니다"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("AFPSCharacter::PlayReloadMontage: 리로드 몽타주 재생 시작 - %s"), *Montage->GetName());
+
+	// 1인칭 메시에서 몽타주 재생
+	if (FirstPersonMesh && FirstPersonMesh->GetAnimInstance())
+	{
+		FirstPersonMesh->GetAnimInstance()->Montage_Play(Montage);
+		UE_LOG(LogTemp, Warning, TEXT("AFPSCharacter::PlayReloadMontage: FirstPersonMesh에서 재생"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("AFPSCharacter::PlayReloadMontage: FirstPersonMesh 또는 AnimInstance가 null"));
+	}
+
+	// 3인칭 메시에서 몽타주 재생 (멀티플레이어용)
+	if (GetMesh() && GetMesh()->GetAnimInstance())
+	{
+		GetMesh()->GetAnimInstance()->Montage_Play(Montage);
+		UE_LOG(LogTemp, Warning, TEXT("AFPSCharacter::PlayReloadMontage: ThirdPersonMesh에서 재생"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("AFPSCharacter::PlayReloadMontage: ThirdPersonMesh 또는 AnimInstance가 null"));
 	}
 }
 
@@ -576,6 +632,27 @@ void AFPSCharacter::OnWeaponActivated(AFPSWeapon* Weapon)
 
 void AFPSCharacter::OnWeaponDeactivated(AFPSWeapon* Weapon)
 {
+	if (WeaponSlotComponent)
+	{
+		if (AFPSWeapon* CurrentWeapon = WeaponSlotComponent->GetCurrentWeaponActor())
+		{
+			CurrentWeapon->StopFiring();
+		}
+	}
+
+	// 무기 관련 모든 활성화된 어빌리티 취소
+	if (AbilitySystemComponent)
+	{
+		// 발사 및 리로드 어빌리티 강제 취소
+		FGameplayTagContainer AbilitiesToCancel;
+		AbilitiesToCancel.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Fire")));
+		AbilitiesToCancel.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.Reload")));
+
+		AbilitySystemComponent->CancelAbilities(&AbilitiesToCancel);
+
+		UE_LOG(LogTemp, Warning, TEXT("OnWeaponDeactivated: 무기 관련 어빌리티들 취소"));
+	}
+
 	// 기본 애님 인스턴스 클래스로 복원
 	if (DefaultFirstPersonAnimClass && FirstPersonMesh)
 	{
@@ -704,5 +781,34 @@ void AFPSCharacter::TryPickupItem(const FInputActionValue& Value)
 	else
 	{
 		UE_LOG(LogTemp, Log, TEXT("픽업 가능한 아이템을 찾을 수 없습니다"));
+	}
+}
+
+void AFPSCharacter::ReloadPressed(const FInputActionValue& Value)
+{
+	// R키가 눌렸는지 확인
+	const bool bPressed = Value.Get<bool>();
+	if (!bPressed)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("R키 리로드 시도"));
+
+	// GameplayAbility_Reload 활성화
+	if (AbilitySystemComponent)
+	{
+		// 리로드 어빌리티 클래스로 어빌리티 활성화 시도
+		// 어빌리티 클래스는 Blueprint에서 설정해야 함
+		bool bSuccess = AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Reload"))));
+
+		if (!bSuccess)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("ReloadPressed: 리로드 어빌리티 활성화 실패 (어빌리티가 없거나 조건 불충족)"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("ReloadPressed: AbilitySystemComponent가 null입니다"));
 	}
 }

@@ -167,10 +167,34 @@ void AFPSWeapon::StartFiring()
 		return;
 	}
 
+	// 리로드 중인지 확인 (AbilitySystemComponent를 통해)
+	if (PawnOwner->Implements<UAbilitySystemInterface>())
+	{
+		if (UAbilitySystemComponent* ASC = Cast<IAbilitySystemInterface>(PawnOwner)->GetAbilitySystemComponent())
+		{
+			// 모든 활성화 가능한 어빌리티를 확인
+			const TArray<FGameplayAbilitySpec>& Abilities = ASC->GetActivatableAbilities();
+			for (const FGameplayAbilitySpec& Spec : Abilities)
+			{
+				// 활성화된 어빌리티이고 리로드 태그를 가지고 있는지 확인
+				if (Spec.IsActive() && Spec.Ability)
+				{
+					const FGameplayTagContainer& AssetTags = Spec.Ability->GetAssetTags();
+					if (AssetTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Ability.Reload"))))
+					{
+						UE_LOG(LogTemp, Warning, TEXT("StartFiring: 리로드 중이므로 발사 불가"));
+						return;
+					}
+				}
+			}
+		}
+	}
+
 	// 탄약이 있는지 확인
 	if (WeaponItemData->IsAmmoEmpty())
 	{
 		// TODO: 빈 무기 사운드/애니메이션 재생
+		UE_LOG(LogTemp, Warning, TEXT("StartFiring: 탄약이 없음"));
 		return;
 	}
 
@@ -183,7 +207,7 @@ void AFPSWeapon::StartFiring()
 		if (UAbilitySystemComponent* ASC = Cast<IAbilitySystemInterface>(PawnOwner)->GetAbilitySystemComponent())
 		{
 			// 발사 어빌리티 활성화 시도
-			if (ASC->TryActivateAbilityByClass(FireAbility))
+			if (ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Fire")))))
 			{
 				// 어빌리티 활성화 성공, 어빌리티가 Fire() 호출 처리
 				return;
