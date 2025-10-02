@@ -1,12 +1,12 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "FPS/UI/WeaponHUD.h"
+#include "FPS/UI/PlayerHUD.h"
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
 #include "Components/Image.h"
 #include "Engine/Engine.h"
 
-void UWeaponHUD::NativeConstruct()
+void UPlayerHUD::NativeConstruct()
 {
     Super::NativeConstruct();
 
@@ -63,7 +63,7 @@ void UWeaponHUD::NativeConstruct()
     UE_LOG(LogTemp, Log, TEXT("PlayerHUD 초기화 완료 (체력/스태미나/무기/크로스헤어)"));
 }
 
-void UWeaponHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
 
@@ -77,7 +77,7 @@ void UWeaponHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
     }
 }
 
-void UWeaponHUD::UpdateAmmoDisplay(int32 CurrentAmmo, int32 MaxAmmo)
+void UPlayerHUD::UpdateAmmoDisplay(int32 CurrentAmmo, int32 MaxAmmo)
 {
     if (!AmmoText)
     {
@@ -116,7 +116,7 @@ void UWeaponHUD::UpdateAmmoDisplay(int32 CurrentAmmo, int32 MaxAmmo)
     UE_LOG(LogTemp, VeryVerbose, TEXT("탄약 표시 업데이트: %s"), *AmmoString);
 }
 
-void UWeaponHUD::UpdateWeaponName(const FString &WeaponName)
+void UPlayerHUD::UpdateWeaponName(const FString &WeaponName)
 {
     if (!WeaponNameText)
     {
@@ -138,7 +138,7 @@ void UWeaponHUD::UpdateWeaponName(const FString &WeaponName)
     UE_LOG(LogTemp, VeryVerbose, TEXT("무기 이름 업데이트: %s"), *WeaponName);
 }
 
-void UWeaponHUD::UpdateWeaponSlots(const FString &PrimaryWeapon, const FString &SecondaryWeapon, int32 ActiveSlot)
+void UPlayerHUD::UpdateWeaponSlots(const FString &PrimaryWeapon, const FString &SecondaryWeapon, int32 ActiveSlot)
 {
     // Primary 슬롯 업데이트
     if (PrimarySlotText)
@@ -180,7 +180,7 @@ void UWeaponHUD::UpdateWeaponSlots(const FString &PrimaryWeapon, const FString &
            *PrimaryWeapon, *SecondaryWeapon, ActiveSlot);
 }
 
-void UWeaponHUD::RefreshWeaponHUD()
+void UPlayerHUD::RefreshWeaponHUD()
 {
     // 외부에서 호출하여 전체 HUD 갱신
     // WeaponSlotComponent에서 현재 상태를 가져와서 업데이트
@@ -191,7 +191,7 @@ void UWeaponHUD::RefreshWeaponHUD()
 }
 
 // === 체력/스태미나 업데이트 구현 ===
-void UWeaponHUD::UpdateHealthBar(float CurrentHealth, float MaxHealth)
+void UPlayerHUD::UpdateHealthBar(float CurrentHealth, float MaxHealth)
 {
     if (!HealthBar)
     {
@@ -227,7 +227,7 @@ void UWeaponHUD::UpdateHealthBar(float CurrentHealth, float MaxHealth)
     UE_LOG(LogTemp, VeryVerbose, TEXT("체력 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentHealth, MaxHealth, HealthPercent * 100.0f);
 }
 
-void UWeaponHUD::UpdateStaminaBar(float CurrentStamina, float MaxStamina)
+void UPlayerHUD::UpdateStaminaBar(float CurrentStamina, float MaxStamina)
 {
     if (!StaminaBar)
     {
@@ -253,7 +253,7 @@ void UWeaponHUD::UpdateStaminaBar(float CurrentStamina, float MaxStamina)
 }
 
 // === 크로스헤어 업데이트 구현 ===
-void UWeaponHUD::SetCrosshairSpread(float Spread)
+void UPlayerHUD::SetCrosshairSpread(float Spread)
 {
     TargetCrosshairSpread = FMath::Clamp(Spread, BaseCrosshairSpread, BaseCrosshairSpread * 3.0f);
     UE_LOG(LogTemp, VeryVerbose, TEXT("크로스헤어 확산 설정: %.1f"), TargetCrosshairSpread);

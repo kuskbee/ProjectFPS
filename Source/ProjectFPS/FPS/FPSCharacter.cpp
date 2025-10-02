@@ -22,7 +22,7 @@
 #include "DrawDebugHelpers.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "FPS/Interfaces/Pickupable.h"
-#include "FPS/UI/WeaponHUD.h"
+#include "FPS/UI/PlayerHUD.h"
 #include "FPS/Items/WeaponItemData.h"
 #include "Blueprint/UserWidget.h"
 
@@ -143,7 +143,7 @@ void AFPSCharacter::BeginPlay()
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetController()))
 		{
-			WeaponHUDWidget = CreateWidget<UWeaponHUD>(PC, WeaponHUDClass);
+			WeaponHUDWidget = CreateWidget<UPlayerHUD>(PC, WeaponHUDClass);
 			if (WeaponHUDWidget)
 			{
 				WeaponHUDWidget->AddToViewport();

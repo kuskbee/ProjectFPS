@@ -7,14 +7,14 @@
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
 #include "Components/Image.h"
-#include "WeaponHUD.generated.h"
+#include "PlayerHUD.generated.h"
 
 /**
  * 플레이어 HUD - 체력, 스태미나, 탄약, 크로스헤어 표시
  * C++에서 로직 구현, Blueprint에서 비주얼 디자인
  */
 UCLASS(BlueprintType, Blueprintable)
-class PROJECTFPS_API UWeaponHUD : public UUserWidget
+class PROJECTFPS_API UPlayerHUD : public UUserWidget
 {
 	GENERATED_BODY()
 
