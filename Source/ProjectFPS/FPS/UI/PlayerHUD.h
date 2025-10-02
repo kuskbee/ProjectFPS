@@ -4,10 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/TextBlock.h"
-#include "Components/ProgressBar.h"
-#include "Components/Image.h"
 #include "PlayerHUD.generated.h"
+
+class UProgressBar;
+class UTextBlock;
+class UImage;
 
 /**
  * 플레이어 HUD - 체력, 스태미나, 탄약, 크로스헤어 표시
