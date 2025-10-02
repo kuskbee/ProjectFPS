@@ -120,6 +120,9 @@ void AFPSCharacter::BeginPlay()
 		// Health 속성 변경에 바인딩
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCharacterAttributeSet::GetHealthAttribute()).AddUObject(this, &AFPSCharacter::OnHealthChanged);
 
+		// Stamina 속성 변경에 바인딩
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCharacterAttributeSet::GetStaminaAttribute()).AddUObject(this, &AFPSCharacter::OnStaminaChanged);
+
 		// 기본 어빌리티들 부여
 		if (HasAuthority())
 		{
@@ -214,6 +217,12 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 
 void AFPSCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
+	// HUD 업데이트
+	if (WeaponHUDWidget && AttributeSet)
+	{
+		WeaponHUDWidget->UpdateHealthBar(Data.NewValue, AttributeSet->GetMaxHealth());
+	}
+
 	// 디버그 메시지 출력
 	if (GEngine)
 	{
@@ -235,6 +244,17 @@ void AFPSCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("체력 0 이하이지만 이미 죽은 상태 - 사망 처리 건너뜀"));
 	}
+}
+
+void AFPSCharacter::OnStaminaChanged(const FOnAttributeChangeData& Data)
+{
+	// HUD 업데이트
+	if (WeaponHUDWidget && AttributeSet)
+	{
+		WeaponHUDWidget->UpdateStaminaBar(Data.NewValue, AttributeSet->GetMaxStamina());
+	}
+
+	UE_LOG(LogTemp, VeryVerbose, TEXT("스태미나 변경: %.1f / %.1f"), Data.NewValue, AttributeSet ? AttributeSet->GetMaxStamina() : 0.0f);
 }
 
 void AFPSCharacter::ServerNotifyPlayerDeath_Implementation()

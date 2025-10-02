@@ -43,6 +43,9 @@ protected:
 	// Health 속성 변경 시 호출
 	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
 
+	// Stamina 속성 변경 시 호출
+	virtual void OnStaminaChanged(const FOnAttributeChangeData& Data);
+
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyPlayerDeath();
 	void ServerNotifyPlayerDeath_Implementation();

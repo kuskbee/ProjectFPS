@@ -2,13 +2,36 @@
 
 #include "FPS/UI/WeaponHUD.h"
 #include "Components/TextBlock.h"
+#include "Components/ProgressBar.h"
+#include "Components/Image.h"
 #include "Engine/Engine.h"
 
 void UWeaponHUD::NativeConstruct()
 {
     Super::NativeConstruct();
 
-    // 초기 상태 설정
+    // === 체력/스태미나 바 초기화 ===
+    if (HealthBar)
+    {
+        HealthBar->SetPercent(1.0f);
+    }
+
+    if (StaminaBar)
+    {
+        StaminaBar->SetPercent(1.0f);
+    }
+
+    if (HealthText)
+    {
+        HealthText->SetText(FText::FromString(TEXT("100 / 100")));
+    }
+
+    if (StaminaText)
+    {
+        StaminaText->SetText(FText::FromString(TEXT("100 / 100")));
+    }
+
+    // === 무기 정보 초기화 ===
     if (AmmoText)
     {
         AmmoText->SetText(FText::FromString(TEXT("-- / --")));
@@ -33,7 +56,25 @@ void UWeaponHUD::NativeConstruct()
         SecondarySlotText->SetColorAndOpacity(InactiveSlotColor);
     }
 
-    UE_LOG(LogTemp, Log, TEXT("WeaponHUD 초기화 완료"));
+    // === 크로스헤어 초기화 ===
+    CurrentCrosshairSpread = BaseCrosshairSpread;
+    TargetCrosshairSpread = BaseCrosshairSpread;
+
+    UE_LOG(LogTemp, Log, TEXT("PlayerHUD 초기화 완료 (체력/스태미나/무기/크로스헤어)"));
+}
+
+void UWeaponHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    // 크로스헤어 확산 부드럽게 보간
+    if (FMath::Abs(CurrentCrosshairSpread - TargetCrosshairSpread) > 0.1f)
+    {
+        CurrentCrosshairSpread = FMath::FInterpTo(CurrentCrosshairSpread, TargetCrosshairSpread, InDeltaTime, CrosshairInterpSpeed);
+
+        // 크로스헤어 위치 업데이트 (Blueprint에서 RenderTransform 사용)
+        // 여기서는 확산 값만 업데이트, 실제 위치는 Blueprint에서 바인딩
+    }
 }
 
 void UWeaponHUD::UpdateAmmoDisplay(int32 CurrentAmmo, int32 MaxAmmo)
@@ -147,4 +188,73 @@ void UWeaponHUD::RefreshWeaponHUD()
 
     // TODO: WeaponSlotComponent에서 현재 상태 정보를 가져와서 업데이트
     // 지금은 기본 구조만 만들어둠
+}
+
+// === 체력/스태미나 업데이트 구현 ===
+void UWeaponHUD::UpdateHealthBar(float CurrentHealth, float MaxHealth)
+{
+    if (!HealthBar)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("HealthBar가 null입니다!"));
+        return;
+    }
+
+    // 체력 퍼센트 계산
+    float HealthPercent = (MaxHealth > 0.0f) ? (CurrentHealth / MaxHealth) : 0.0f;
+    HealthBar->SetPercent(HealthPercent);
+
+    // 체력 텍스트 업데이트 (Optional)
+    if (HealthText)
+    {
+        FString HealthString = FString::Printf(TEXT("%.0f / %.0f"), CurrentHealth, MaxHealth);
+        HealthText->SetText(FText::FromString(HealthString));
+    }
+
+    // 체력이 낮으면 바 색상 변경 (Blueprint에서 설정 가능하도록)
+    // 30% 이하면 빨간색, 60% 이하면 노란색
+    FLinearColor BarColor = FLinearColor::Green;
+    if (HealthPercent <= 0.3f)
+    {
+        BarColor = FLinearColor::Red;
+    }
+    else if (HealthPercent <= 0.6f)
+    {
+        BarColor = FLinearColor::Yellow;
+    }
+
+    HealthBar->SetFillColorAndOpacity(BarColor);
+
+    UE_LOG(LogTemp, VeryVerbose, TEXT("체력 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentHealth, MaxHealth, HealthPercent * 100.0f);
+}
+
+void UWeaponHUD::UpdateStaminaBar(float CurrentStamina, float MaxStamina)
+{
+    if (!StaminaBar)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("StaminaBar가 null입니다!"));
+        return;
+    }
+
+    // 스태미나 퍼센트 계산
+    float StaminaPercent = (MaxStamina > 0.0f) ? (CurrentStamina / MaxStamina) : 0.0f;
+    StaminaBar->SetPercent(StaminaPercent);
+
+    // 스태미나 텍스트 업데이트 (Optional)
+    if (StaminaText)
+    {
+        FString StaminaString = FString::Printf(TEXT("%.0f / %.0f"), CurrentStamina, MaxStamina);
+        StaminaText->SetText(FText::FromString(StaminaString));
+    }
+
+    // 스태미나 바 색상 (기본 청록색)
+    StaminaBar->SetFillColorAndOpacity(FLinearColor(0.0f, 0.8f, 0.8f)); // Cyan
+
+    UE_LOG(LogTemp, VeryVerbose, TEXT("스태미나 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentStamina, MaxStamina, StaminaPercent * 100.0f);
+}
+
+// === 크로스헤어 업데이트 구현 ===
+void UWeaponHUD::SetCrosshairSpread(float Spread)
+{
+    TargetCrosshairSpread = FMath::Clamp(Spread, BaseCrosshairSpread, BaseCrosshairSpread * 3.0f);
+    UE_LOG(LogTemp, VeryVerbose, TEXT("크로스헤어 확산 설정: %.1f"), TargetCrosshairSpread);
 }
