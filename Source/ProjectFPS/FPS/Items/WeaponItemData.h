@@ -53,6 +53,18 @@ public:
 	bool bIsAutomatic = false;
 
 	// ========================================
+	// 크로스헤어 설정
+	// ========================================
+
+	/** 크로스헤어 기본 확산 (무기별로 다름) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crosshair", meta = (ClampMin = 5.0, ClampMax = 50.0))
+	float CrosshairBaseSpread = 5.0f;
+
+	/** 발사 시 크로스헤어 확산 증가량 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Crosshair", meta = (ClampMin = 0.0, ClampMax = 20.0))
+	float CrosshairRecoilSpread = 15.0f;
+
+	// ========================================
 	// 런타임 상태 데이터 (게임 중 변경되는 값들)
 	// ========================================
 

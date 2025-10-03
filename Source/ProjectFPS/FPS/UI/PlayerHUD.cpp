@@ -4,6 +4,7 @@
 #include "Components/TextBlock.h"
 #include "Components/ProgressBar.h"
 #include "Components/Image.h"
+#include "Components/Spacer.h"
 #include "Engine/Engine.h"
 
 void UPlayerHUD::NativeConstruct()
@@ -67,13 +68,28 @@ void UPlayerHUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
     Super::NativeTick(MyGeometry, InDeltaTime);
 
+    // 발사 확산은 시간에 따라 감소
+    if (FiringSpreadAmount > 0.0f)
+    {
+        FiringSpreadAmount = FMath::FInterpTo(FiringSpreadAmount, 0.0f, InDeltaTime, FiringSpreadDecaySpeed);
+    }
+
+    // 최종 목표 확산 = 기본 확산 + 발사 확산 + 이동 확산
+    TargetCrosshairSpread = BaseCrosshairSpread + FiringSpreadAmount + MovementSpreadAmount;
+
     // 크로스헤어 확산 부드럽게 보간
     if (FMath::Abs(CurrentCrosshairSpread - TargetCrosshairSpread) > 0.1f)
     {
         CurrentCrosshairSpread = FMath::FInterpTo(CurrentCrosshairSpread, TargetCrosshairSpread, InDeltaTime, CrosshairInterpSpeed);
+    }
 
-        // 크로스헤어 위치 업데이트 (Blueprint에서 RenderTransform 사용)
-        // 여기서는 확산 값만 업데이트, 실제 위치는 Blueprint에서 바인딩
+    // Spacer 크기 변경으로 크로스헤어 확산 표현
+    if (SpacerTop && SpacerBottom && SpacerLeft && SpacerRight)
+    {
+        SpacerTop->SetSize(FVector2D(DefaultSpacerSize, CurrentCrosshairSpread));
+        SpacerBottom->SetSize(FVector2D(DefaultSpacerSize, CurrentCrosshairSpread));
+        SpacerLeft->SetSize(FVector2D(CurrentCrosshairSpread, DefaultSpacerSize));
+        SpacerRight->SetSize(FVector2D(CurrentCrosshairSpread, DefaultSpacerSize));
     }
 }
 
@@ -176,6 +192,8 @@ void UPlayerHUD::UpdateWeaponSlots(const FString &PrimaryWeapon, const FString &
         }
     }
 
+    // 현재 활성무기가 없다면 (BaseCrosshairSpread는 OnWeaponDeactivated에서 0으로 설정됨)
+
     UE_LOG(LogTemp, VeryVerbose, TEXT("무기 슬롯 업데이트: P=%s, S=%s, Active=%d"),
            *PrimaryWeapon, *SecondaryWeapon, ActiveSlot);
 }
@@ -253,8 +271,23 @@ void UPlayerHUD::UpdateStaminaBar(float CurrentStamina, float MaxStamina)
 }
 
 // === 크로스헤어 업데이트 구현 ===
-void UPlayerHUD::SetCrosshairSpread(float Spread)
+void UPlayerHUD::SetCrosshairFiringSpread(float Spread)
 {
-    TargetCrosshairSpread = FMath::Clamp(Spread, BaseCrosshairSpread, BaseCrosshairSpread * 3.0f);
-    UE_LOG(LogTemp, VeryVerbose, TEXT("크로스헤어 확산 설정: %.1f"), TargetCrosshairSpread);
+    // 발사 확산 설정 (현재 값보다 크면 갱신)
+    FiringSpreadAmount = FMath::Max(FiringSpreadAmount, Spread);
+    UE_LOG(LogTemp, VeryVerbose, TEXT("크로스헤어 발사 확산: %.1f"), FiringSpreadAmount);
+}
+
+void UPlayerHUD::SetCrosshairMovementSpread(float Spread)
+{
+    // 이동 확산 설정
+    MovementSpreadAmount = Spread;
+    UE_LOG(LogTemp, VeryVerbose, TEXT("크로스헤어 이동 확산: %.1f"), MovementSpreadAmount);
+}
+
+void UPlayerHUD::SetBaseCrosshairSpread(float NewBaseSpread)
+{
+    // 기본 크로스헤어 확산 설정 (무기 교체 시)
+    BaseCrosshairSpread = NewBaseSpread;
+    UE_LOG(LogTemp, Log, TEXT("크로스헤어 기본 확산 변경: %.1f"), BaseCrosshairSpread);
 }

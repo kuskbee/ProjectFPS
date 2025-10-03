@@ -162,6 +162,23 @@ void AFPSCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	// 이동 시 크로스헤어 확산 업데이트
+	if (WeaponSlotComponent)
+	{
+		AFPSWeapon* CurrentWeapon = WeaponSlotComponent->GetCurrentWeaponActor();
+		if (CurrentWeapon && CurrentWeapon->GetWeaponItemData())
+		{
+			// 캐릭터 이동 속도 가져오기
+			FVector Velocity = GetVelocity();
+			float Speed = Velocity.Size2D();
+
+			// 이동 속도에 비례한 확산 (0 ~ 최대 10)
+			float MovementSpread = FMath::Clamp(Speed / 100.0f, 0.0f, 10.0f);
+
+			// HUD에 이동 확산 설정
+			UpdateCrosshairMovementSpread(MovementSpread);
+		}
+	}
 }
 
 // 입력에 기능을 바인딩하기 위해 호출
@@ -604,6 +621,28 @@ void AFPSCharacter::UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize)
 	UE_LOG(LogTemp, VeryVerbose, TEXT("WeaponHUD 업데이트: %d/%d"), CurrentAmmo, MagazineSize);
 }
 
+void AFPSCharacter::UpdateCrosshairFiringSpread(float Spread)
+{
+	if (!WeaponHUDWidget)
+	{
+		return;
+	}
+
+	// HUD에 발사 확산 설정
+	WeaponHUDWidget->SetCrosshairFiringSpread(Spread);
+}
+
+void AFPSCharacter::UpdateCrosshairMovementSpread(float Spread)
+{
+	if (!WeaponHUDWidget)
+	{
+		return;
+	}
+
+	// HUD에 이동 확산 설정
+	WeaponHUDWidget->SetCrosshairMovementSpread(Spread);
+}
+
 FVector AFPSCharacter::GetWeaponTargetLocation()
 {
 	if (!FirstPersonCameraComponent)
@@ -674,6 +713,13 @@ void AFPSCharacter::OnWeaponActivated(AFPSWeapon* Weapon)
 			GetMesh()->SetAnimInstanceClass(TPAnimClass);
 		}
 	}
+
+	// 무기의 BaseCrosshairSpread 설정
+	if (WeaponHUDWidget && Weapon->GetWeaponItemData())
+	{
+		float WeaponBaseSpread = Weapon->GetWeaponItemData()->CrosshairBaseSpread;
+		WeaponHUDWidget->SetBaseCrosshairSpread(WeaponBaseSpread);
+	}
 }
 
 void AFPSCharacter::OnWeaponDeactivated(AFPSWeapon* Weapon)
@@ -710,6 +756,12 @@ void AFPSCharacter::OnWeaponDeactivated(AFPSWeapon* Weapon)
 	{
 		GetMesh()->SetAnimInstanceClass(DefaultThirdPersonAnimClass);
 		UE_LOG(LogTemp, Log, TEXT("3인칭 애니메이션을 기본값으로 복원"));
+	}
+
+	// 무기 해제 시 BaseCrosshairSpread를 0으로 초기화
+	if (WeaponHUDWidget)
+	{
+		WeaponHUDWidget->SetBaseCrosshairSpread(0.0f);
 	}
 }
 

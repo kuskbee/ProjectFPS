@@ -55,4 +55,10 @@ public:
 
 	/** 반자동 무기의 쿨다운이 만료되어 다시 발사할 준비가 되었음을 소유자에게 알림 */
 	virtual void OnSemiWeaponRefire() = 0;
+
+	/** 발사 시 크로스헤어 확산 업데이트 */
+	virtual void UpdateCrosshairFiringSpread(float Spread) = 0;
+
+	/** 이동 시 크로스헤어 확산 업데이트 */
+	virtual void UpdateCrosshairMovementSpread(float Spread) = 0;
 };

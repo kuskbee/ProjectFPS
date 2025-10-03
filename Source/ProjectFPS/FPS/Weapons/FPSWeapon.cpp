@@ -266,6 +266,9 @@ void AFPSWeapon::Fire()
 	// HUD 업데이트
 	WeaponOwner->UpdateWeaponHUD(WeaponItemData->CurrentAmmo, WeaponItemData->MagazineSize);
 
+	// 크로스헤어 확산 업데이트 (발사 반동)
+	WeaponOwner->UpdateCrosshairFiringSpread(WeaponItemData->CrosshairRecoilSpread);
+
 	// 자동 무기의 연사 처리
 	if (WeaponItemData->bIsAutomatic && bIsFiring)
 	{

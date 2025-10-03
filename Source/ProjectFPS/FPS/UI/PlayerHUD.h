@@ -78,6 +78,22 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UImage> CrosshairRight;
 
+	/** 크로스헤어 확산용 Spacer - 상단 */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<class USpacer> SpacerTop;
+
+	/** 크로스헤어 확산용 Spacer - 하단 */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<USpacer> SpacerBottom;
+
+	/** 크로스헤어 확산용 Spacer - 좌측 */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<USpacer> SpacerLeft;
+
+	/** 크로스헤어 확산용 Spacer - 우측 */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<USpacer> SpacerRight;
+
 public:
 	// === 체력/스태미나 업데이트 ===
 	/** 체력 바 업데이트 */
@@ -106,9 +122,17 @@ public:
 	void RefreshWeaponHUD();
 
 	// === 크로스헤어 업데이트 ===
-	/** 크로스헤어 확산 설정 (발사 반동, 이동 시) */
+	/** 발사 시 크로스헤어 확산 설정 */
 	UFUNCTION(BlueprintCallable, Category = "Crosshair")
-	void SetCrosshairSpread(float Spread);
+	void SetCrosshairFiringSpread(float Spread);
+
+	/** 이동 시 크로스헤어 확산 설정 */
+	UFUNCTION(BlueprintCallable, Category = "Crosshair")
+	void SetCrosshairMovementSpread(float Spread);
+
+	/** 기본 크로스헤어 확산 설정 (무기 교체 시) */
+	UFUNCTION(BlueprintCallable, Category = "Crosshair")
+	void SetBaseCrosshairSpread(float NewBaseSpread);
 
 protected:
 	// === UI 스타일 설정 ===
@@ -125,16 +149,31 @@ protected:
 	// === 크로스헤어 설정 ===
 	/** 크로스헤어 기본 간격 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crosshair")
-	float BaseCrosshairSpread = 10.0f;
+	float BaseCrosshairSpread = 0.0f;
+
+	/** Spacer 기본 크기 (Blueprint에서 설정한 값과 동일하게) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crosshair")
+	float DefaultSpacerSize = 3.0f;
 
 	/** 현재 크로스헤어 확산 */
 	UPROPERTY(BlueprintReadOnly, Category = "Crosshair")
-	float CurrentCrosshairSpread = 10.0f;
+	float CurrentCrosshairSpread = 5.0f;
 
 	/** 크로스헤어 확산 보간 속도 */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crosshair")
 	float CrosshairInterpSpeed = 10.0f;
 
-	/** 목표 크로스헤어 확산 */
-	float TargetCrosshairSpread = 10.0f;
+	/** 발사로 인한 확산 감소 속도 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Crosshair")
+	float FiringSpreadDecaySpeed = 5.0f;
+
+private:
+	/** 발사로 인한 크로스헤어 확산 (시간에 따라 감소) */
+	float FiringSpreadAmount = 0.0f;
+
+	/** 이동으로 인한 크로스헤어 확산 */
+	float MovementSpreadAmount = 0.0f;
+
+	/** 목표 크로스헤어 확산 (발사 + 이동 확산의 합) */
+	float TargetCrosshairSpread = 5.0f;
 };

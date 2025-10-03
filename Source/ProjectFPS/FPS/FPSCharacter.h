@@ -85,6 +85,8 @@ public:
 	virtual void OnWeaponActivated(AFPSWeapon* Weapon) override;
 	virtual void OnWeaponDeactivated(AFPSWeapon* Weapon) override;
 	virtual void OnSemiWeaponRefire() override;
+	virtual void UpdateCrosshairFiringSpread(float Spread) override;
+	virtual void UpdateCrosshairMovementSpread(float Spread) override;
 
 	// 1인칭 메시 접근자
 	UFUNCTION(BlueprintCallable, Category = "Character")
