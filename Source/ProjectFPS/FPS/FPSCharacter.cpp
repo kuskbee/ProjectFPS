@@ -212,6 +212,12 @@ void AFPSCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompon
 		{
 			EnhancedInputComponent->BindAction(ReloadAction, ETriggerEvent::Triggered, this, &AFPSCharacter::ReloadPressed);
 		}
+
+		// Shift 질주
+		if (SprintAction)
+		{
+			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AFPSCharacter::Sprint);
+		}
 	}
 }
 
@@ -255,6 +261,26 @@ void AFPSCharacter::OnStaminaChanged(const FOnAttributeChangeData& Data)
 	}
 
 	UE_LOG(LogTemp, VeryVerbose, TEXT("스태미나 변경: %.1f / %.1f"), Data.NewValue, AttributeSet ? AttributeSet->GetMaxStamina() : 0.0f);
+
+	// 스태미나가 0 이하가 되면 Sprint Ability 자동 종료
+	if (Data.NewValue <= 0.0f && AbilitySystemComponent)
+	{
+		FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(FName("Ability.Sprint"));
+		TArray<FGameplayAbilitySpec*> ActiveAbilities;
+		AbilitySystemComponent->GetActivatableGameplayAbilitySpecsByAllMatchingTags(
+			FGameplayTagContainer(SprintTag),
+			ActiveAbilities
+		);
+
+		for (FGameplayAbilitySpec* Spec : ActiveAbilities)
+		{
+			if (Spec && Spec->IsActive())
+			{
+				AbilitySystemComponent->CancelAbilityHandle(Spec->Handle);
+				UE_LOG(LogTemp, Warning, TEXT("스태미나 고갈: Sprint Ability 자동 종료"));
+			}
+		}
+	}
 }
 
 void AFPSCharacter::ServerNotifyPlayerDeath_Implementation()
@@ -830,5 +856,52 @@ void AFPSCharacter::ReloadPressed(const FInputActionValue& Value)
 	else
 	{
 		UE_LOG(LogTemp, Error, TEXT("ReloadPressed: AbilitySystemComponent가 null입니다"));
+	}
+}
+
+void AFPSCharacter::Sprint(const FInputActionValue& Value)
+{
+	// Shift 키 상태 확인 (true = 눌림, false = 뗌)
+	const bool bIsSprinting = Value.Get<bool>();
+
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	if (bIsSprinting)
+	{
+		// Shift 눌림: Sprint Ability 활성화
+		UE_LOG(LogTemp, Log, TEXT("Shift 키 눌림: Sprint 시작 시도"));
+		bool bSuccess = AbilitySystemComponent->TryActivateAbilitiesByTag(
+			FGameplayTagContainer(FGameplayTag::RequestGameplayTag(FName("Ability.Sprint")))
+		);
+
+		if (!bSuccess)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Sprint: 어빌리티 활성화 실패 (스태미나 부족 또는 어빌리티 없음)"));
+		}
+	}
+	else
+	{
+		// Shift 뗌: Sprint Ability 종료
+		UE_LOG(LogTemp, Log, TEXT("Shift 키 뗌: Sprint 종료 시도"));
+
+		// 활성화된 Sprint Ability 찾아서 종료
+		FGameplayTag SprintTag = FGameplayTag::RequestGameplayTag(FName("Ability.Sprint"));
+		TArray<FGameplayAbilitySpec*> ActiveAbilities;
+		AbilitySystemComponent->GetActivatableGameplayAbilitySpecsByAllMatchingTags(
+			FGameplayTagContainer(SprintTag),
+			ActiveAbilities
+		);
+
+		for (FGameplayAbilitySpec* Spec : ActiveAbilities)
+		{
+			if (Spec && Spec->IsActive())
+			{
+				AbilitySystemComponent->CancelAbilityHandle(Spec->Handle);
+				UE_LOG(LogTemp, Log, TEXT("Sprint Ability 종료됨"));
+			}
+		}
 	}
 }

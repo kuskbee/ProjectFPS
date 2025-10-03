@@ -249,7 +249,7 @@ void UPlayerHUD::UpdateStaminaBar(float CurrentStamina, float MaxStamina)
     // 스태미나 바 색상 (기본 청록색)
     StaminaBar->SetFillColorAndOpacity(FLinearColor(0.0f, 0.8f, 0.8f)); // Cyan
 
-    UE_LOG(LogTemp, VeryVerbose, TEXT("스태미나 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentStamina, MaxStamina, StaminaPercent * 100.0f);
+    UE_LOG(LogTemp, Log, TEXT("스태미나 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentStamina, MaxStamina, StaminaPercent * 100.0f);
 }
 
 // === 크로스헤어 업데이트 구현 ===

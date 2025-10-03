@@ -2,8 +2,9 @@
 
 
 #include "FPS/CharacterAttributeSet.h"
-
+#include "FPS/GameplayEffect_StaminaRecover.h"
 #include "Net/UnrealNetwork.h"
+#include "GameplayEffectExtension.h"
 
 UCharacterAttributeSet::UCharacterAttributeSet()
 {
@@ -64,4 +65,76 @@ void UCharacterAttributeSet::OnRep_Stamina(const FGameplayAttributeData& OldStam
 void UCharacterAttributeSet::OnRep_MaxStamina(const FGameplayAttributeData& OldMaxStamina)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UCharacterAttributeSet, MaxStamina, OldMaxStamina);
+}
+
+void UCharacterAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
+{
+	Super::PreAttributeChange(Attribute, NewValue);
+
+	// Health 클램핑: 0 ~ MaxHealth
+	if (Attribute == GetHealthAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxHealth());
+	}
+	// Stamina 클램핑: 0 ~ MaxStamina
+	else if (Attribute == GetStaminaAttribute())
+	{
+		float OldValue = GetStamina();
+		UE_LOG(LogTemp, Log, TEXT("PreAttributeChange 스태미나 클램핑 전: %.1f -> %.1f (+%.1f)"), OldValue, NewValue, NewValue - OldValue);
+		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxStamina());
+		UE_LOG(LogTemp, Log, TEXT("PreAttributeChange 스태미나 클램핑 후: %.1f -> %.1f (+%.1f)"), OldValue, NewValue, NewValue - OldValue);
+
+		// 스태미나 변경 로그 (증가/감소 구분)
+		/*if (NewValue > OldValue)
+		{
+			UE_LOG(LogTemp, Log, TEXT("스태미나 회복: %.1f -> %.1f (+%.1f)"), OldValue, NewValue, NewValue - OldValue);
+		}
+		else if (NewValue < OldValue)
+		{
+			UE_LOG(LogTemp, Log, TEXT("스태미나 소모: %.1f -> %.1f (%.1f)"), OldValue, NewValue, NewValue - OldValue);
+		}*/
+	}
+	// Mana 클램핑: 0 ~ MaxMana
+	else if (Attribute == GetManaAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxMana());
+	}
+}
+
+void UCharacterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
+{
+	Super::PostGameplayEffectExecute(Data);
+
+	UE_LOG(LogTemp, Warning, TEXT("PostGameplayEffectExecute 호출됨! Attribute: %s"), *Data.EvaluatedData.Attribute.GetName());
+
+	// 스태미나가 MaxStamina에 도달하면 StaminaRecover Effect 제거
+	if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
+	{
+		float CurrentStamina = GetStamina();
+		float MaxStaminaValue = GetMaxStamina();
+
+		if (CurrentStamina >= MaxStaminaValue)
+		{
+			UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+			if (ASC)
+			{
+				// GameplayEffect_StaminaRecover 클래스로 Effect 찾기
+				FGameplayEffectQuery Query;
+				Query.CustomMatchDelegate.BindLambda([](const FActiveGameplayEffect& ActiveGE)
+					{
+						// 자식 클래스 까지 포함해서 찾도록 함.
+						const UGameplayEffect* Def = ActiveGE.Spec.Def;
+						return Def && Def->GetClass()->IsChildOf(UGameplayEffect_StaminaRecover::StaticClass());
+					});
+
+				TArray<FActiveGameplayEffectHandle> ActiveEffects = ASC->GetActiveEffects(Query);
+
+				for (const FActiveGameplayEffectHandle& Handle : ActiveEffects)
+				{
+					ASC->RemoveActiveGameplayEffect(Handle);
+					UE_LOG(LogTemp, Log, TEXT("PostGameplayEffectExecute: 스태미나 최대치 도달, StaminaRecover Effect 제거"));
+				}
+			}
+		}
+	}
 }

@@ -22,32 +22,32 @@ class PROJECTFPS_API UCharacterAttributeSet : public UAttributeSet
 public:
 	UCharacterAttributeSet();
 
-	// Ã¼·Â ¼Ó¼º
+	// Ã¼ï¿½ï¿½ ï¿½Ó¼ï¿½
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_Health)
 	FGameplayAttributeData Health;
 	ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, Health);
 
-	// ÃÖ´ë Ã¼·Â ¼Ó¼º
+	// ï¿½Ö´ï¿½ Ã¼ï¿½ï¿½ ï¿½Ó¼ï¿½
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_MaxHealth)
 	FGameplayAttributeData MaxHealth;
 	ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, MaxHealth);
 
-	// ¸¶³ª ¼Ó¼º
+	// ï¿½ï¿½ï¿½ï¿½ ï¿½Ó¼ï¿½
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_Mana)
 	FGameplayAttributeData Mana;
 	ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, Mana);
 
-	// ÃÖ´ë ¸¶³ª ¼Ó¼º
+	// ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ó¼ï¿½
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_MaxMana)
 	FGameplayAttributeData MaxMana;
 	ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, MaxMana);
 
-	// ½ºÅÂ¹Ì³ª ¼Ó¼º
+	// ï¿½ï¿½ï¿½Â¹Ì³ï¿½ ï¿½Ó¼ï¿½
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_Stamina)
 	FGameplayAttributeData Stamina;
 	ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, Stamina);
 
-	// ÃÖ´ë ½ºÅÂ¹Ì³ª ¼Ó¼º
+	// ï¿½Ö´ï¿½ ï¿½ï¿½ï¿½Â¹Ì³ï¿½ ï¿½Ó¼ï¿½
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_MaxStamina)
 	FGameplayAttributeData MaxStamina;
 	ATTRIBUTE_ACCESSORS(UCharacterAttributeSet, MaxStamina);
@@ -74,4 +74,10 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_MaxStamina(const FGameplayAttributeData& OldMaxStamina);
 
+public:
+	// Attribute ê°’ ë³€ê²½ ì „ í´ë¨í•‘ ì²˜ë¦¬ (0 ì´í•˜ ë°©ì§€, ìµœëŒ€ê°’ ì´ˆê³¼ ë°©ì§€)
+	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+
+	// GameplayEffect ì ìš© í›„ í˜¸ì¶œ (Effect ì œê±° ë“± ë¡œì§ ì²˜ë¦¬)
+	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 };

@@ -72,6 +72,7 @@ public:
 	void SwitchToSecondaryWeapon(const FInputActionValue& Value);
 	void TryPickupItem(const FInputActionValue& Value);
 	void ReloadPressed(const FInputActionValue& Value);
+	void Sprint(const FInputActionValue& Value);
 
 	// IFPSWeaponHolder 인터페이스 구현
 	virtual void AttachWeaponMeshes(AFPSWeapon* Weapon) override;
@@ -185,6 +186,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> ReloadAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> SprintAction;
 
 	/** 게임 시작 시 자동으로 부여할 어빌리티들 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")
