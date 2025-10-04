@@ -13,6 +13,7 @@
 class USkeletalMeshComponent;
 class UAbilitySystemComponent;
 class UCharacterAttributeSet;
+class UPlayerAttributeSet;
 class UGameplayAbility;
 class UInputMappingContext;
 class UInputAction;
@@ -48,6 +49,9 @@ protected:
 
 	// Shield 속성 변경 시 호출
 	virtual void OnShieldChanged(const FOnAttributeChangeData& Data);
+
+	// SkillPoint 속성 변경 시 호출
+	virtual void OnSkillPointChanged(const FOnAttributeChangeData& Data);
 
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyPlayerDeath();
@@ -104,6 +108,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UCharacterAttributeSet> AttributeSet;
+
+	UPROPERTY()
+	TObjectPtr<UPlayerAttributeSet> PlayerAttributeSet;
 
 	// 무기 슬롯 관리 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))

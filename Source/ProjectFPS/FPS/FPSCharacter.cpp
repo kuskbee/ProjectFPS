@@ -2,6 +2,7 @@
 
 #include "FPS/FPSCharacter.h"
 #include "FPS/CharacterAttributeSet.h"
+#include "FPS/PlayerAttributeSet.h"
 #include "FPS/GameplayEffect_Heal.h"
 #include "FPS/Weapons/FPSWeapon.h"
 #include "FPS/Components/WeaponSlotComponent.h"
@@ -107,6 +108,19 @@ void AFPSCharacter::BeginPlay()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 
+		// AttributeSet 초기화
+		const UPlayerAttributeSet* ExistingSet = AbilitySystemComponent->GetSet<UPlayerAttributeSet>();
+		if (!ExistingSet)
+		{
+			UPlayerAttributeSet* NewSet = NewObject<UPlayerAttributeSet>(this);
+			AbilitySystemComponent->AddAttributeSetSubobject(NewSet);
+			PlayerAttributeSet = NewSet;
+		}
+		else
+		{
+			PlayerAttributeSet = const_cast<UPlayerAttributeSet*>(ExistingSet);
+		}
+
 		// 기본 AnimInstance 클래스들 저장 (무기 비활성화 시 복원용)
 		if (FirstPersonMesh)
 		{
@@ -125,6 +139,9 @@ void AFPSCharacter::BeginPlay()
 
 		// Shield 속성 변경에 바인딩
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCharacterAttributeSet::GetShieldAttribute()).AddUObject(this, &AFPSCharacter::OnShieldChanged);
+
+		// SkillPoint 속성 변경에 바인딩
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UPlayerAttributeSet::GetSkillPointAttribute()).AddUObject(this, &AFPSCharacter::OnSkillPointChanged);
 
 		// 기본 어빌리티들 부여
 		if (HasAuthority())
@@ -312,6 +329,14 @@ void AFPSCharacter::OnShieldChanged(const FOnAttributeChangeData& Data)
 	}
 
 	UE_LOG(LogTemp, VeryVerbose, TEXT("쉴드 변경: %.1f / %.1f"), Data.NewValue, AttributeSet ? AttributeSet->GetMaxShield() : 0.0f);
+}
+
+void AFPSCharacter::OnSkillPointChanged(const FOnAttributeChangeData& Data)
+{
+	// 스킬 포인트 변경 시 로그 출력 (나중에 UI 업데이트 추가)
+	UE_LOG(LogTemp, Log, TEXT("SkillPoint 변경: %.0f"), Data.NewValue);
+
+	// TODO: 스킬트리 UI가 있다면 여기서 업데이트
 }
 
 void AFPSCharacter::ServerNotifyPlayerDeath_Implementation()
