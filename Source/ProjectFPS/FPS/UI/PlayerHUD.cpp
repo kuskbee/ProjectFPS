@@ -22,6 +22,11 @@ void UPlayerHUD::NativeConstruct()
         StaminaBar->SetPercent(1.0f);
     }
 
+    if (ShieldBar)
+    {
+        ShieldBar->SetPercent(1.0f);
+    }
+
     if (HealthText)
     {
         HealthText->SetText(FText::FromString(TEXT("100 / 100")));
@@ -264,10 +269,33 @@ void UPlayerHUD::UpdateStaminaBar(float CurrentStamina, float MaxStamina)
         StaminaText->SetText(FText::FromString(StaminaString));
     }
 
-    // 스태미나 바 색상 (기본 청록색)
-    StaminaBar->SetFillColorAndOpacity(FLinearColor(0.0f, 0.8f, 0.8f)); // Cyan
-
     UE_LOG(LogTemp, Log, TEXT("스태미나 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentStamina, MaxStamina, StaminaPercent * 100.0f);
+}
+
+void UPlayerHUD::UpdateShieldBar(float CurrentShield, float MaxShield)
+{
+    if (!ShieldBar)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ShieldBar가 null입니다!"));
+        return;
+    }
+
+    // MaxShield가 0이면 ShieldBar를 숨김 (스킬 미개방 상태)
+    if (MaxShield <= 0.0f)
+    {
+        ShieldBar->SetVisibility(ESlateVisibility::Collapsed);
+        UE_LOG(LogTemp, VeryVerbose, TEXT("쉴드 스킬 미개방 - ShieldBar 숨김"));
+        return;
+    }
+
+    // MaxShield가 0보다 크면 표시
+    ShieldBar->SetVisibility(ESlateVisibility::Visible);
+
+    // 쉴드 퍼센트 계산
+    float ShieldPercent = CurrentShield / MaxShield;
+    ShieldBar->SetPercent(ShieldPercent);
+
+    UE_LOG(LogTemp, Log, TEXT("쉴드 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentShield, MaxShield, ShieldPercent * 100.0f);
 }
 
 // === 크로스헤어 업데이트 구현 ===

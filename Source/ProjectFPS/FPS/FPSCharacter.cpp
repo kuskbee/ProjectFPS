@@ -123,6 +123,9 @@ void AFPSCharacter::BeginPlay()
 		// Stamina 속성 변경에 바인딩
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCharacterAttributeSet::GetStaminaAttribute()).AddUObject(this, &AFPSCharacter::OnStaminaChanged);
 
+		// Shield 속성 변경에 바인딩
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UCharacterAttributeSet::GetShieldAttribute()).AddUObject(this, &AFPSCharacter::OnShieldChanged);
+
 		// 기본 어빌리티들 부여
 		if (HasAuthority())
 		{
@@ -298,6 +301,17 @@ void AFPSCharacter::OnStaminaChanged(const FOnAttributeChangeData& Data)
 			}
 		}
 	}
+}
+
+void AFPSCharacter::OnShieldChanged(const FOnAttributeChangeData& Data)
+{
+	// HUD 업데이트
+	if (WeaponHUDWidget && AttributeSet)
+	{
+		WeaponHUDWidget->UpdateShieldBar(Data.NewValue, AttributeSet->GetMaxShield());
+	}
+
+	UE_LOG(LogTemp, VeryVerbose, TEXT("쉴드 변경: %.1f / %.1f"), Data.NewValue, AttributeSet ? AttributeSet->GetMaxShield() : 0.0f);
 }
 
 void AFPSCharacter::ServerNotifyPlayerDeath_Implementation()

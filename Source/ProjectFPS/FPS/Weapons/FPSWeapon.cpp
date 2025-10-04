@@ -323,7 +323,8 @@ FTransform AFPSWeapon::CalculateProjectileSpawnTransform(const FVector& TargetLo
 	FRotator SpawnRotation;
 
 	// 머즐 소켓 위치 가져오기 시도
-	if (FirstPersonMesh && FirstPersonMesh->DoesSocketExist(MuzzleSocketName))
+	// 1인칭 메시가 보이는 상태면 1인칭 메시 사용 (플레이어용)
+	if (FirstPersonMesh && FirstPersonMesh->IsVisible() && FirstPersonMesh->DoesSocketExist(MuzzleSocketName))
 	{
 		SpawnLocation = FirstPersonMesh->GetSocketLocation(MuzzleSocketName);
 
@@ -331,6 +332,16 @@ FTransform AFPSWeapon::CalculateProjectileSpawnTransform(const FVector& TargetLo
 		FVector Direction = (TargetLocation - SpawnLocation).GetSafeNormal();
 		SpawnRotation = Direction.Rotation();
 	}
+	// 1인칭 메시가 안 보이면 3인칭 메시 사용 (적 AI용)
+	else if (ThirdPersonMesh && ThirdPersonMesh->DoesSocketExist(MuzzleSocketName))
+	{
+		SpawnLocation = ThirdPersonMesh->GetSocketLocation(MuzzleSocketName);
+
+		// 머즐에서 목표까지의 방향 계산
+		FVector Direction = (TargetLocation - SpawnLocation).GetSafeNormal();
+		SpawnRotation = Direction.Rotation();
+	}
+	// 둘 다 없으면 액터 위치로 대체
 	else
 	{
 		// 액터 위치와 회전으로 대체

@@ -42,7 +42,7 @@ protected:
 	float SightRange = 1500.0f; // 시야 범위
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Settings")
-	float AttackRange = 300.0f; // 공격 범위
+	float AttackRange = 600.0f; // 공격 범위
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Settings")
 	float SightAngle = 60.0f; // 시야각 (도 단위)

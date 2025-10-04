@@ -32,6 +32,10 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> StaminaBar;
 
+	/** 쉴드 프로그레스 바 */
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UProgressBar> ShieldBar;
+
 	/** 체력 텍스트 (예: "100 / 100") */
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> HealthText;
@@ -103,6 +107,10 @@ public:
 	/** 스태미나 바 업데이트 */
 	UFUNCTION(BlueprintCallable, Category = "Player HUD")
 	void UpdateStaminaBar(float CurrentStamina, float MaxStamina);
+
+	/** 쉴드 바 업데이트 */
+	UFUNCTION(BlueprintCallable, Category = "Player HUD")
+	void UpdateShieldBar(float CurrentShield, float MaxShield);
 
 	// === 무기 정보 업데이트 ===
 	/** 탄약 정보 업데이트 */
