@@ -13,7 +13,6 @@
 class USkeletalMeshComponent;
 class UAbilitySystemComponent;
 class UCharacterAttributeSet;
-class UPlayerAttributeSet;
 class UGameplayAbility;
 class UInputMappingContext;
 class UInputAction;
@@ -23,7 +22,6 @@ class AFPSWeapon;
 class UAnimMontage;
 class UGameplayEffect;
 class UWeaponSlotComponent;
-class UPlayerHUD;
 
 UCLASS()
 class PROJECTFPS_API AFPSCharacter : public ACharacter, public IAbilitySystemInterface, public IFPSWeaponHolder
@@ -41,17 +39,14 @@ protected:
 	// 게임 시작 시 또는 스폰될 때 호출
 	virtual void BeginPlay() override;
 
-	// Health 속성 변경 시 호출
-	virtual void OnHealthChanged(const FOnAttributeChangeData& Data);
+	// Health 속성 변경 시 호출 (자식 클래스에서 override)
+	virtual void OnHealthChanged(const FOnAttributeChangeData& Data) {}
 
-	// Stamina 속성 변경 시 호출
-	virtual void OnStaminaChanged(const FOnAttributeChangeData& Data);
+	// Stamina 속성 변경 시 호출 (자식 클래스에서 override)
+	virtual void OnStaminaChanged(const FOnAttributeChangeData& Data) {}
 
-	// Shield 속성 변경 시 호출
-	virtual void OnShieldChanged(const FOnAttributeChangeData& Data);
-
-	// SkillPoint 속성 변경 시 호출
-	virtual void OnSkillPointChanged(const FOnAttributeChangeData& Data);
+	// Shield 속성 변경 시 호출 (자식 클래스에서 override)
+	virtual void OnShieldChanged(const FOnAttributeChangeData& Data) {}
 
 	UFUNCTION(Server, Reliable)
 	void ServerNotifyPlayerDeath();
@@ -67,20 +62,6 @@ public:
 	// 매 프레임마다 호출
 	virtual void Tick(float DeltaTime) override;
 
-	// 입력과 기능을 바인딩하기 위해 호출
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
-
-	// 입력 액션 핸들러 함수들
-	void FireAbilityPressed(const FInputActionValue& Value);
-	void Move(const FInputActionValue& Value);
-	void Look(const FInputActionValue& Value);
-	void SwitchWeaponSlot(const FInputActionValue& Value);
-	void SwitchToPrimaryWeapon(const FInputActionValue& Value);
-	void SwitchToSecondaryWeapon(const FInputActionValue& Value);
-	void TryPickupItem(const FInputActionValue& Value);
-	void ReloadPressed(const FInputActionValue& Value);
-	void Sprint(const FInputActionValue& Value);
-
 	// IFPSWeaponHolder 인터페이스 구현
 	virtual void AttachWeaponMeshes(AFPSWeapon* Weapon) override;
 	virtual void PlayFiringMontage(UAnimMontage* Montage) override;
@@ -89,11 +70,11 @@ public:
 	virtual void UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize) override;
 	virtual FVector GetWeaponTargetLocation() override;
 	virtual void AddWeaponClass(const TSubclassOf<AFPSWeapon>& WeaponClass) override;
-	virtual void OnWeaponActivated(AFPSWeapon* Weapon) override;
-	virtual void OnWeaponDeactivated(AFPSWeapon* Weapon) override;
-	virtual void OnSemiWeaponRefire() override;
-	virtual void UpdateCrosshairFiringSpread(float Spread) override;
-	virtual void UpdateCrosshairMovementSpread(float Spread) override;
+	virtual void OnWeaponActivated(AFPSWeapon* Weapon) override {}
+	virtual void OnWeaponDeactivated(AFPSWeapon* Weapon) override {}
+	virtual void OnSemiWeaponRefire() override {}
+	virtual void UpdateCrosshairFiringSpread(float Spread) override {}
+	virtual void UpdateCrosshairMovementSpread(float Spread) override {}
 
 	// 1인칭 메시 접근자
 	UFUNCTION(BlueprintCallable, Category = "Character")
@@ -108,9 +89,6 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UCharacterAttributeSet> AttributeSet;
-
-	UPROPERTY()
-	TObjectPtr<UPlayerAttributeSet> PlayerAttributeSet;
 
 	// 무기 슬롯 관리 컴포넌트
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
@@ -144,15 +122,6 @@ protected:
 	TSubclassOf<UAnimInstance> DefaultFirstPersonAnimClass;
 	TSubclassOf<UAnimInstance> DefaultThirdPersonAnimClass;
 
-	// UI 관련
-	/** WeaponHUD 위젯 클래스 (Blueprint에서 설정) */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
-	TSubclassOf<UPlayerHUD> WeaponHUDClass;
-
-	/** 현재 활성화된 WeaponHUD 인스턴스 */
-	UPROPERTY(BlueprintReadOnly, Category = "UI")
-	TObjectPtr<UPlayerHUD> WeaponHUDWidget;
-
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TSubclassOf<UGameplayEffect> HealEffect;
@@ -160,47 +129,6 @@ public:
 	// 무기 슬롯 관리 함수들
 	UFUNCTION(BlueprintCallable, Category="Weapons")
 	class UWeaponSlotComponent* GetWeaponSlotComponent() const { return WeaponSlotComponent; }
-
-	/** 테스트용: 기본 무기 자동 지급 */
-	UFUNCTION(BlueprintCallable, Category="Weapons")
-	virtual void GiveDefaultWeapon();
-
-	// 입력
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputMappingContext> DefaultMappingContext;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputMappingContext> MouseLookMappingContext;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> FireAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> MoveAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> LookAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> JumpAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> SwitchWeaponAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> PrimaryWeaponAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> SecondaryWeaponAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> PickupAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> ReloadAction;
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
-	TObjectPtr<UInputAction> SprintAction;
 
 	/** 게임 시작 시 자동으로 부여할 어빌리티들 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")

@@ -66,7 +66,7 @@ public:
 	bool IsDead() const { return bIsDead; }
 
 	/** AI 전용: 기본 무기 자동 지급 (부모 클래스 오버라이드) */
-	virtual void GiveDefaultWeapon() override;
+	void GiveDefaultWeapon();
 
 protected:
 	// 사망 처리 (AI 전용)
