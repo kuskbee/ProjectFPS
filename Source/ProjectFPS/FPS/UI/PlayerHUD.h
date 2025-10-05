@@ -32,6 +32,10 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> StaminaBar;
 
+	/** 쉴드 바를 감싸는 Border (Visibility 제어용) */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<class UBorder> ShieldBarBorder;
+
 	/** 쉴드 프로그레스 바 */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> ShieldBar;

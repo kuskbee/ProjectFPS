@@ -8,6 +8,7 @@
 
 class UPlayerAttributeSet;
 class UPlayerHUD;
+class USkillComponent;
 
 /**
  * 플레이어 전용 캐릭터 클래스
@@ -39,6 +40,11 @@ protected:
 	// Player 전용 AttributeSet
 	UPROPERTY()
 	TObjectPtr<UPlayerAttributeSet> PlayerAttributeSet;
+
+	// 스킬 시스템
+	/** 스킬 관리 컴포넌트 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<USkillComponent> SkillComponent;
 
 	// UI 관련
 	/** PlayerHUD 위젯 클래스 (Blueprint에서 설정) */
@@ -87,6 +93,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> SprintAction;
 
+	// 테스트용 입력
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Debug")
+	TObjectPtr<UInputAction> TestSkillAction;
+
 	// 플레이어 입력 핸들러들
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
@@ -97,6 +107,9 @@ public:
 	void TryPickupItem(const FInputActionValue& Value);
 	void ReloadPressed(const FInputActionValue& Value);
 	void Sprint(const FInputActionValue& Value);
+
+	// 테스트용 함수
+	void TestAcquireSkill(const FInputActionValue& Value);
 
 	// IFPSWeaponHolder 인터페이스 오버라이드 (HUD 업데이트용)
 	virtual void UpdateWeaponHUD(int32 CurrentAmmo, int32 MagazineSize) override;

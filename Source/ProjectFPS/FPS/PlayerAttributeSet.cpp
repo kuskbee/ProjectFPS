@@ -7,8 +7,9 @@
 UPlayerAttributeSet::UPlayerAttributeSet()
 {
 	// Default values for Player Attributes
-	SkillPoint.SetBaseValue(0.0f);
-	SkillPoint.SetCurrentValue(0.0f);
+	// 테스트용: 시작 시 스킬 포인트 5개 지급
+	SkillPoint.SetBaseValue(5.0f);
+	SkillPoint.SetCurrentValue(5.0f);
 }
 
 void UPlayerAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

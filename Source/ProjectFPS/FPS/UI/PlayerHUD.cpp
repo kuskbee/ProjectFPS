@@ -5,6 +5,7 @@
 #include "Components/ProgressBar.h"
 #include "Components/Image.h"
 #include "Components/Spacer.h"
+#include "Components/Border.h"
 #include "Engine/Engine.h"
 
 void UPlayerHUD::NativeConstruct()
@@ -280,16 +281,23 @@ void UPlayerHUD::UpdateShieldBar(float CurrentShield, float MaxShield)
         return;
     }
 
-    // MaxShield가 0이면 ShieldBar를 숨김 (스킬 미개방 상태)
+    // MaxShield가 0이면 Border를 숨김 (스킬 미개방 상태)
     if (MaxShield <= 0.0f)
     {
-        ShieldBar->SetVisibility(ESlateVisibility::Collapsed);
-        UE_LOG(LogTemp, VeryVerbose, TEXT("쉴드 스킬 미개방 - ShieldBar 숨김"));
+        if (ShieldBarBorder)
+        {
+            ShieldBarBorder->SetVisibility(ESlateVisibility::Collapsed);
+            UE_LOG(LogTemp, Log, TEXT("쉴드 스킬 미개방 - ShieldBarBorder 숨김"));
+        }
         return;
     }
 
-    // MaxShield가 0보다 크면 표시
-    ShieldBar->SetVisibility(ESlateVisibility::Visible);
+    // MaxShield가 0보다 크면 Border 표시
+    if (ShieldBarBorder)
+    {
+        ShieldBarBorder->SetVisibility(ESlateVisibility::Visible);
+        UE_LOG(LogTemp, Warning, TEXT("ShieldBarBorder를 Visible로 설정! CurrentShield=%.0f, MaxShield=%.0f"), CurrentShield, MaxShield);
+    }
 
     // 쉴드 퍼센트 계산
     float ShieldPercent = CurrentShield / MaxShield;

@@ -5,6 +5,7 @@
 #include "FPS/PlayerAttributeSet.h"
 #include "FPS/UI/PlayerHUD.h"
 #include "FPS/Components/WeaponSlotComponent.h"
+#include "FPS/Components/SkillComponent.h"
 #include "FPS/Weapons/FPSWeapon.h"
 #include "FPS/Items/WeaponItemData.h"
 #include "FPS/Interfaces/Pickupable.h"
@@ -17,7 +18,8 @@
 
 AFPSPlayerCharacter::AFPSPlayerCharacter()
 {
-	// PlayerCharacter는 추가 초기화 없음 (부모에서 이미 초기화됨)
+	// SkillComponent 생성
+	SkillComponent = CreateDefaultSubobject<USkillComponent>(TEXT("SkillComponent"));
 }
 
 void AFPSPlayerCharacter::BeginPlay()
@@ -164,6 +166,12 @@ void AFPSPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		if (SprintAction)
 		{
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AFPSPlayerCharacter::Sprint);
+		}
+
+		// 테스트용 스킬 습득 입력 (K키)
+		if (TestSkillAction)
+		{
+			EnhancedInputComponent->BindAction(TestSkillAction, ETriggerEvent::Triggered, this, &AFPSPlayerCharacter::TestAcquireSkill);
 		}
 	}
 }
@@ -635,5 +643,42 @@ void AFPSPlayerCharacter::OnWeaponDeactivated(AFPSWeapon* Weapon)
 	if (PlayerHUDWidget)
 	{
 		PlayerHUDWidget->SetBaseCrosshairSpread(0.0f);
+	}
+}
+
+void AFPSPlayerCharacter::TestAcquireSkill(const FInputActionValue& Value)
+{
+	if (!SkillComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("TestAcquireSkill: SkillComponent가 없습니다."));
+		return;
+	}
+
+	// 테스트용 스킬 ID (Blueprint DataAsset 생성 후 설정)
+	FGameplayTag TestSkillTag = FGameplayTag::RequestGameplayTag(FName("Skill.Shield.Tier1"));
+
+	UE_LOG(LogTemp, Log, TEXT("TestAcquireSkill: 스킬 습득 시도 - %s"), *TestSkillTag.ToString());
+
+	// 스킬 습득 시도
+	ESkillAcquireResult Result = SkillComponent->TryAcquireSkill(TestSkillTag);
+
+	// 결과 로그
+	switch (Result)
+	{
+	case ESkillAcquireResult::Success:
+		UE_LOG(LogTemp, Log, TEXT("TestAcquireSkill: 스킬 습득 성공!"));
+		break;
+	case ESkillAcquireResult::AlreadyAcquired:
+		UE_LOG(LogTemp, Warning, TEXT("TestAcquireSkill: 이미 습득한 스킬입니다."));
+		break;
+	case ESkillAcquireResult::InsufficientPoints:
+		UE_LOG(LogTemp, Warning, TEXT("TestAcquireSkill: 스킬 포인트가 부족합니다."));
+		break;
+	case ESkillAcquireResult::PrerequisiteNotMet:
+		UE_LOG(LogTemp, Warning, TEXT("TestAcquireSkill: 선행 스킬이 필요합니다."));
+		break;
+	case ESkillAcquireResult::InvalidSkill:
+		UE_LOG(LogTemp, Warning, TEXT("TestAcquireSkill: 유효하지 않은 스킬 ID입니다. SkillDataArray에 해당 스킬을 추가하세요."));
+		break;
 	}
 }
