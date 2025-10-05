@@ -655,7 +655,7 @@ void AFPSPlayerCharacter::TestAcquireSkill(const FInputActionValue& Value)
 	}
 
 	// 테스트용 스킬 ID (Blueprint DataAsset 생성 후 설정)
-	FGameplayTag TestSkillTag = FGameplayTag::RequestGameplayTag(FName("Skill.Shield.Tier1"));
+	FGameplayTag TestSkillTag = FGameplayTag::RequestGameplayTag(FName("Skill.Common.MaxHealth"));
 
 	UE_LOG(LogTemp, Log, TEXT("TestAcquireSkill: 스킬 습득 시도 - %s"), *TestSkillTag.ToString());
 

@@ -24,13 +24,25 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 	// === 체력/스태미나 관련 ===
+	/** 체력 바를 감싸는 SizeBox (Width 동적 조정용) */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<class USizeBox> HealthBarSizeBox;
+
 	/** 체력 프로그레스 바 */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> HealthBar;
 
+	/** 스태미나 바를 감싸는 SizeBox (Width 동적 조정용) */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<class USizeBox> StaminaBarSizeBox;
+
 	/** 스태미나 프로그레스 바 */
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UProgressBar> StaminaBar;
+
+	/** 쉴드 바를 감싸는 SizeBox (Width 동적 조정용) */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<class USizeBox> ShieldBarSizeBox;
 
 	/** 쉴드 바를 감싸는 Border (Visibility 제어용) */
 	UPROPERTY(meta = (BindWidgetOptional))

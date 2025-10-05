@@ -6,6 +6,7 @@
 #include "Components/Image.h"
 #include "Components/Spacer.h"
 #include "Components/Border.h"
+#include "Components/SizeBox.h"
 #include "Engine/Engine.h"
 
 void UPlayerHUD::NativeConstruct()
@@ -248,6 +249,14 @@ void UPlayerHUD::UpdateHealthBar(float CurrentHealth, float MaxHealth)
 
     HealthBar->SetFillColorAndOpacity(BarColor);
 
+    // SizeBox Width 동적 조정 (MaxHealth 기준: 1 MaxHealth = 4px)
+    if (HealthBarSizeBox)
+    {
+        float NewWidth = MaxHealth * 4.0f;  // 100 MaxHealth = 400px
+        HealthBarSizeBox->SetWidthOverride(NewWidth);
+        UE_LOG(LogTemp, Log, TEXT("HealthBar Width 조정: %.0fpx (MaxHealth=%.0f)"), NewWidth, MaxHealth);
+    }
+
     UE_LOG(LogTemp, VeryVerbose, TEXT("체력 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentHealth, MaxHealth, HealthPercent * 100.0f);
 }
 
@@ -268,6 +277,14 @@ void UPlayerHUD::UpdateStaminaBar(float CurrentStamina, float MaxStamina)
     {
         FString StaminaString = FString::Printf(TEXT("%.0f / %.0f"), CurrentStamina, MaxStamina);
         StaminaText->SetText(FText::FromString(StaminaString));
+    }
+
+    // SizeBox Width 동적 조정 (MaxStamina 기준: 1 MaxStamina = 4px)
+    if (StaminaBarSizeBox)
+    {
+        float NewWidth = MaxStamina * 4.0f;  // 100 MaxStamina = 400px
+        StaminaBarSizeBox->SetWidthOverride(NewWidth);
+        UE_LOG(LogTemp, Log, TEXT("StaminaBar Width 조정: %.0fpx (MaxStamina=%.0f)"), NewWidth, MaxStamina);
     }
 
     UE_LOG(LogTemp, Log, TEXT("스태미나 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentStamina, MaxStamina, StaminaPercent * 100.0f);
@@ -302,6 +319,14 @@ void UPlayerHUD::UpdateShieldBar(float CurrentShield, float MaxShield)
     // 쉴드 퍼센트 계산
     float ShieldPercent = CurrentShield / MaxShield;
     ShieldBar->SetPercent(ShieldPercent);
+
+    // SizeBox Width 동적 조정 (MaxShield 기준: 1 MaxShield = 2px)
+    if (ShieldBarSizeBox)
+    {
+        float NewWidth = MaxShield * 2.0f;  // 50 MaxShield = 100px
+        ShieldBarSizeBox->SetWidthOverride(NewWidth);
+        UE_LOG(LogTemp, Log, TEXT("ShieldBar Width 조정: %.0fpx (MaxShield=%.0f)"), NewWidth, MaxShield);
+    }
 
     UE_LOG(LogTemp, Log, TEXT("쉴드 바 업데이트: %.0f / %.0f (%.1f%%)"), CurrentShield, MaxShield, ShieldPercent * 100.0f);
 }
