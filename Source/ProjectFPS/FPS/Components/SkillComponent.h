@@ -45,7 +45,7 @@ public:
 
 	/** 전체 스킬 데이터 (에디터에서 설정 - Array 방식) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Tree")
-	TArray<TSoftObjectPtr<UBaseSkillData>> SkillDataArray;
+	TArray<TObjectPtr<UBaseSkillData>> SkillDataArray;
 
 	/** 스킬 습득 시도 */
 	UFUNCTION(BlueprintCallable, Category = "Skills")
@@ -69,7 +69,7 @@ private:
 
 	/** 런타임 캐시 (빠른 검색용 - Map 방식) */
 	UPROPERTY()
-	TMap<FGameplayTag, TSoftObjectPtr<UBaseSkillData>> SkillDataMap;
+	TMap<FGameplayTag, TObjectPtr<UBaseSkillData>> SkillDataMap;
 
 	/** Owner의 AbilitySystemComponent 캐싱 */
 	TWeakObjectPtr<UAbilitySystemComponent> CachedASC;

@@ -10,6 +10,13 @@ UPlayerAttributeSet::UPlayerAttributeSet()
 	// 테스트용: 시작 시 스킬 포인트 5개 지급
 	SkillPoint.SetBaseValue(5.0f);
 	SkillPoint.SetCurrentValue(5.0f);
+
+	// Critical 초기값 설정
+	CritChance.SetBaseValue(0.05f);      // 기본 크리티컬 확률 5%
+	CritChance.SetCurrentValue(0.05f);
+
+	CritDamage.SetBaseValue(1.5f);       // 기본 크리티컬 데미지 150%
+	CritDamage.SetCurrentValue(1.5f);
 }
 
 void UPlayerAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -18,11 +25,25 @@ void UPlayerAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 
 	// SkillPoint 리플리케이션 설정
 	DOREPLIFETIME_CONDITION_NOTIFY(UPlayerAttributeSet, SkillPoint, COND_None, REPNOTIFY_Always);
+
+	// Critical Attributes 리플리케이션 설정
+	DOREPLIFETIME_CONDITION_NOTIFY(UPlayerAttributeSet, CritChance, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UPlayerAttributeSet, CritDamage, COND_None, REPNOTIFY_Always);
 }
 
 void UPlayerAttributeSet::OnRep_SkillPoint(const FGameplayAttributeData& OldSkillPoint)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UPlayerAttributeSet, SkillPoint, OldSkillPoint);
+}
+
+void UPlayerAttributeSet::OnRep_CritChance(const FGameplayAttributeData& OldCritChance)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPlayerAttributeSet, CritChance, OldCritChance);
+}
+
+void UPlayerAttributeSet::OnRep_CritDamage(const FGameplayAttributeData& OldCritDamage)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UPlayerAttributeSet, CritDamage, OldCritDamage);
 }
 
 void UPlayerAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -34,6 +55,18 @@ void UPlayerAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute
 	{
 		NewValue = FMath::Max(0.0f, NewValue);
 	}
+
+	// CritChance는 0.0 ~ 1.0 사이로 클램핑
+	if (Attribute == GetCritChanceAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, 1.0f);
+	}
+
+	// CritDamage는 1.0 이상으로 클램핑 (100% 이상)
+	if (Attribute == GetCritDamageAttribute())
+	{
+		NewValue = FMath::Max(1.0f, NewValue);
+	}
 }
 
 void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
@@ -44,5 +77,17 @@ void UPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	if (Data.EvaluatedData.Attribute == GetSkillPointAttribute())
 	{
 		UE_LOG(LogTemp, Log, TEXT("SkillPoint 변경: %.0f"), GetSkillPoint());
+	}
+
+	// CritChance 변경 시 로그 출력
+	if (Data.EvaluatedData.Attribute == GetCritChanceAttribute())
+	{
+		UE_LOG(LogTemp, Log, TEXT("CritChance 변경: %.2f%%"), GetCritChance() * 100.0f);
+	}
+
+	// CritDamage 변경 시 로그 출력
+	if (Data.EvaluatedData.Attribute == GetCritDamageAttribute())
+	{
+		UE_LOG(LogTemp, Log, TEXT("CritDamage 변경: %.0f%%"), GetCritDamage() * 100.0f);
 	}
 }

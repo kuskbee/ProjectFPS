@@ -31,11 +31,27 @@ public:
 	FGameplayAttributeData SkillPoint;
 	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, SkillPoint);
 
+	// Critical Chance (크리티컬 확률, 0.0 ~ 1.0)
+	UPROPERTY(BlueprintReadOnly, Category = "Player Attributes", ReplicatedUsing = OnRep_CritChance)
+	FGameplayAttributeData CritChance;
+	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, CritChance);
+
+	// Critical Damage (크리티컬 데미지 배율, 1.5 = 150%)
+	UPROPERTY(BlueprintReadOnly, Category = "Player Attributes", ReplicatedUsing = OnRep_CritDamage)
+	FGameplayAttributeData CritDamage;
+	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, CritDamage);
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
 	virtual void OnRep_SkillPoint(const FGameplayAttributeData& OldSkillPoint);
+
+	UFUNCTION()
+	virtual void OnRep_CritChance(const FGameplayAttributeData& OldCritChance);
+
+	UFUNCTION()
+	virtual void OnRep_CritDamage(const FGameplayAttributeData& OldCritDamage);
 
 	// PreAttributeChange: Attribute 값 변경 전 클램핑 처리
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;

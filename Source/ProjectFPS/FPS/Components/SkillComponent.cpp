@@ -16,12 +16,11 @@ void USkillComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// SkillDataArray → SkillDataMap 변환 (런타임 최적화)
-	for (const TSoftObjectPtr<UBaseSkillData>& SkillDataPtr : SkillDataArray)
+	for (UBaseSkillData* SkillData : SkillDataArray)
 	{
-		UBaseSkillData* SkillData = SkillDataPtr.Get();
 		if (SkillData && SkillData->SkillID.IsValid())
 		{
-			SkillDataMap.Add(SkillData->SkillID, SkillDataPtr);
+			SkillDataMap.Add(SkillData->SkillID, SkillData);
 			UE_LOG(LogTemp, Log, TEXT("스킬 등록: %s"), *SkillData->SkillID.ToString());
 		}
 		else
@@ -118,12 +117,22 @@ bool USkillComponent::CanAcquireSkill(const FGameplayTag& SkillID) const
 		return false;
 	}
 
-	// 선행 스킬 확인
-	for (const FGameplayTag& PrereqSkill : SkillData->PrerequisiteSkills)
+	// 선행 스킬 확인 (OR 조건: 하나라도 습득했으면 통과)
+	if (SkillData->PrerequisiteSkills.Num() > 0)
 	{
-		if (!HasSkill(PrereqSkill))
+		bool bHasAnyPrerequisite = false;
+		for (const FGameplayTag& PrereqSkill : SkillData->PrerequisiteSkills)
 		{
-			UE_LOG(LogTemp, VeryVerbose, TEXT("선행 스킬 미습득: %s"), *PrereqSkill.ToString());
+			if (HasSkill(PrereqSkill))
+			{
+				bHasAnyPrerequisite = true;
+				break;
+			}
+		}
+
+		if (!bHasAnyPrerequisite)
+		{
+			UE_LOG(LogTemp, VeryVerbose, TEXT("선행 스킬 조건 미충족"));
 			return false;
 		}
 	}
@@ -148,7 +157,7 @@ bool USkillComponent::CanAcquireSkill(const FGameplayTag& SkillID) const
 UBaseSkillData* USkillComponent::FindSkillData(const FGameplayTag& SkillID) const
 {
 	// TMap에서 O(1) 검색
-	if (const TSoftObjectPtr<UBaseSkillData>* FoundSkill = SkillDataMap.Find(SkillID))
+	if (const TObjectPtr<UBaseSkillData>* FoundSkill = SkillDataMap.Find(SkillID))
 	{
 		return FoundSkill->Get();
 	}

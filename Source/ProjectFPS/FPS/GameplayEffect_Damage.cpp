@@ -12,8 +12,11 @@ UGameplayEffect_Damage::UGameplayEffect_Damage()
 	FGameplayModifierInfo ModifierInfo;
 	ModifierInfo.Attribute = UCharacterAttributeSet::GetHealthAttribute();
 	ModifierInfo.ModifierOp = EGameplayModOp::Additive;
-	const float DamageAmount = -10.0f; //:TODO: 수정할 수있는 값으로 빼기
-	ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(FScalableFloat(DamageAmount));
+
+	// SetByCaller 방식으로 데미지 값 설정 (발사체에서 동적으로 설정)
+	FSetByCallerFloat SetByCallerMagnitude;
+	SetByCallerMagnitude.DataTag = FGameplayTag::RequestGameplayTag(FName("Data.Damage"));
+	ModifierInfo.ModifierMagnitude = FGameplayEffectModifierMagnitude(SetByCallerMagnitude);
 
 	Modifiers.Add(ModifierInfo);
 }

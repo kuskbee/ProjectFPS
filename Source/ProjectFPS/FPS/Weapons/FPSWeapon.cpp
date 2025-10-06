@@ -2,10 +2,12 @@
 
 #include "FPSWeapon.h"
 #include "FPSWeaponHolder.h"
+#include "FPSProjectile.h"
 #include "FPS/Items/WeaponItemData.h"
 #include "FPS/Components/PickupTriggerComponent.h"
 #include "FPS/FPSCharacter.h"
 #include "FPS/Components/WeaponSlotComponent.h"
+#include "FPS/PlayerAttributeSet.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
 #include "Animation/AnimInstance.h"
@@ -310,6 +312,17 @@ void AFPSWeapon::FireProjectile(const FVector& TargetLocation)
 
 	AActor* Projectile = GetWorld()->SpawnActor<AActor>(ProjectileClass, ProjectileTransform, SpawnParams);
 
+	// 발사체에 데미지 설정 (크리티컬 계산 포함)
+	if (Projectile)
+	{
+		// AFPSProjectile로 캐스팅하여 데미지 설정
+		if (AFPSProjectile* FPSProjectile = Cast<AFPSProjectile>(Projectile))
+		{
+			float FinalDamage = CalculateFinalDamage();
+			FPSProjectile->SetDamage(FinalDamage);
+		}
+	}
+
 	// TODO: AI 인식 시스템용 소음 생성
 	// if (PawnOwner && ShotLoudness > 0.0f)
 	// {
@@ -553,4 +566,54 @@ void AFPSWeapon::SetWeaponOwner(AActor* WeaponHolder)
 	SetInstigator(Cast<APawn>(WeaponHolder));
 	WeaponOwner = Holder;
 	PawnOwner = Cast<APawn>(WeaponHolder);
+}
+
+float AFPSWeapon::CalculateFinalDamage() const
+{
+	if (!WeaponItemData || !PawnOwner)
+	{
+		return 0.0f;
+	}
+
+	float BaseDamage = static_cast<float>(WeaponItemData->BaseDamage);
+
+	// AbilitySystemComponent 가져오기
+	IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(PawnOwner);
+	if (!ASI)
+	{
+		// GAS가 없으면 기본 데미지 반환
+		return BaseDamage;
+	}
+
+	UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return BaseDamage;
+	}
+
+	// PlayerAttributeSet 가져오기 (플레이어만 CritChance/CritDamage 보유)
+	const UPlayerAttributeSet* PlayerAttrSet = ASC->GetSet<UPlayerAttributeSet>();
+	if (!PlayerAttrSet)
+	{
+		// 적 AI 등 PlayerAttributeSet 없으면 기본 데미지
+		return BaseDamage;
+	}
+
+	// 크리티컬 확률 가져오기
+	float CritChance = PlayerAttrSet->GetCritChance();
+	float CritDamage = PlayerAttrSet->GetCritDamage();
+
+	// 크리티컬 판정 (난수)
+	float RandomValue = FMath::FRand(); // 0.0 ~ 1.0
+	if (RandomValue < CritChance)
+	{
+		// 크리티컬 성공!
+		float FinalDamage = BaseDamage * CritDamage;
+		UE_LOG(LogTemp, Warning, TEXT("크리티컬 히트! 기본: %.0f → 최종: %.0f (%.0f%%)"),
+			BaseDamage, FinalDamage, CritDamage * 100.0f);
+		return FinalDamage;
+	}
+
+	// 일반 공격
+	return BaseDamage;
 }

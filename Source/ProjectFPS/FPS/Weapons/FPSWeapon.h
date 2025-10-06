@@ -169,6 +169,9 @@ protected:
 	/** 반자동 무기 발사 시 연사 속도 시간이 경과했을 때 호출됨 */
 	void FireCooldownExpired();
 
+	/** 크리티컬 데미지 계산 (CritChance/CritDamage 기반) */
+	float CalculateFinalDamage() const;
+
 public:
 
 	/** 1인칭 메시 반환 */
