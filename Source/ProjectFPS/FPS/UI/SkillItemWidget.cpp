@@ -6,6 +6,7 @@
 #include "Components/Image.h"
 #include "Components/SkillComponent.h"
 #include "Skills/BaseSkillData.h"
+#include "UI/SkillTreeWidget.h"
 #include "FPSPlayerCharacter.h"
 #include "PlayerAttributeSet.h"
 #include "AbilitySystemComponent.h"
@@ -95,13 +96,11 @@ void USkillItemWidget::OnLearnButtonClicked()
 	{
 		UE_LOG(LogTemp, Log, TEXT("스킬 습득 성공: %s"), *SkillData->SkillName.ToString());
 
-		// 상태 업데이트
-		UpdateSkillState();
-
-		// 부모 위젯에게 알림 (스킬 포인트 갱신을 위해)
-		if (UUserWidget* ParentWidget = Cast<UUserWidget>(GetOuter()))
+		// 부모 SkillTreeWidget의 RefreshSkillList 호출하여 전체 UI 갱신
+		if (USkillTreeWidget* SkillTreeWidget = Cast<USkillTreeWidget>(ParentSkillTreeWidget))
 		{
-			// TODO: 부모 위젯의 RefreshSkillList 호출
+			SkillTreeWidget->RefreshSkillList();
+			UE_LOG(LogTemp, Log, TEXT("스킬트리 UI 갱신 완료"));
 		}
 	}
 	else

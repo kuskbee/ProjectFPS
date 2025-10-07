@@ -9,6 +9,7 @@
 
 class UBaseSkillData;
 class USkillComponent;
+class USkillTreeWidget;
 class UTextBlock;
 class UButton;
 class UImage;
@@ -59,6 +60,14 @@ protected:
 	// SkillComponent 참조
 	UPROPERTY(BlueprintReadOnly, Category = "SkillTree")
 	TObjectPtr<USkillComponent> SkillComponent;
+
+	// 부모 SkillTreeWidget 참조 (UI 갱신용)
+	UPROPERTY(BlueprintReadOnly, Category = "SkillTree")
+	TObjectPtr<UUserWidget> ParentSkillTreeWidget;
+
+public:
+	// 부모 위젯 설정
+	void SetParentSkillTreeWidget(UUserWidget* InParentWidget) { ParentSkillTreeWidget = InParentWidget; }
 
 private:
 	// Learn 버튼 클릭 핸들러
