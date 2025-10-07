@@ -87,7 +87,7 @@ public:
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	/** 데미지 적용 함수 */
-	void ApplyDamageToTarget(AActor* Target);
+	bool ApplyDamageToTarget(AActor* Target);
 
 	/** 충돌 후 이펙트/사운드 재생 */
 	void PlayHitEffects(const FVector& HitLocation);

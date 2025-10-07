@@ -24,6 +24,7 @@ AFPSProjectile::AFPSProjectile()
 	CollisionComponent->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	CollisionComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Overlap);
 	CollisionComponent->SetGenerateOverlapEvents(true);
 
 	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &AFPSProjectile::OnHit);
@@ -61,36 +62,39 @@ void AFPSProjectile::OnHit(UPrimitiveComponent* OverlappedComponent, AActor* Oth
 	}
 
 	// 데미지 적용
-	ApplyDamageToTarget(OtherActor);
+	bool bApply = ApplyDamageToTarget(OtherActor);
 
-	// 이펙트/사운드 재생
-	PlayHitEffects(SweepResult.ImpactPoint);
+	if (bApply)
+	{
+		// 이펙트/사운드 재생
+		PlayHitEffects(SweepResult.ImpactPoint);
 
-	// Blueprint 이벤트 호출
-	OnProjectileHit(SweepResult);
+		// Blueprint 이벤트 호출
+		OnProjectileHit(SweepResult);
 
-	// 발사체 파괴
-	Destroy();
+		// 발사체 파괴
+		Destroy();
+	}
 }
 
-void AFPSProjectile::ApplyDamageToTarget(AActor* Target)
+bool AFPSProjectile::ApplyDamageToTarget(AActor* Target)
 {
 	if (!Target || !DamageEffectClass)
 	{
-		return;
+		return false;
 	}
 
 	// AbilitySystemComponent 가져오기
 	IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Target);
 	if (!ASI)
 	{
-		return;
+		return false;
 	}
 
 	UAbilitySystemComponent* TargetASC = ASI->GetAbilitySystemComponent();
 	if (!TargetASC)
 	{
-		return;
+		return false;
 	}
 
 	// GameplayEffect로 데미지 적용
@@ -105,7 +109,11 @@ void AFPSProjectile::ApplyDamageToTarget(AActor* Target)
 		TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 
 		UE_LOG(LogTemp, Log, TEXT("발사체 데미지 적용: %.0f to %s"), Damage, *Target->GetName());
+
+		return true;
 	}
+
+	return false;
 }
 
 void AFPSProjectile::PlayHitEffects(const FVector& HitLocation)
