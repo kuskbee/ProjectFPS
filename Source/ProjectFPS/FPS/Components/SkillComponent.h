@@ -63,6 +63,22 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Skills")
 	UBaseSkillData* FindSkillData(const FGameplayTag& SkillID) const;
 
+	/** 전체 스킬 목록 가져오기 (UI용) */
+	// C++ 전용 함수 (UFUNCTION 제거 - TObjectPtr 사용으로 인해)
+	const TArray<TObjectPtr<UBaseSkillData>>& GetAllSkills() const { return SkillDataArray; }
+
+	/** LearnSkill - K키 테스트용 래퍼 함수 */
+	UFUNCTION(BlueprintCallable, Category = "Skills")
+	bool LearnSkill(const FGameplayTag& SkillID);
+
+	/** 스킬 습득 가능 여부 (별칭) */
+	UFUNCTION(BlueprintPure, Category = "Skills")
+	bool CanLearnSkill(const FGameplayTag& SkillID) const { return CanAcquireSkill(SkillID); }
+
+	/** 스킬 습득 여부 (별칭) */
+	UFUNCTION(BlueprintPure, Category = "Skills")
+	bool IsSkillLearned(const FGameplayTag& SkillID) const { return HasSkill(SkillID); }
+
 private:
 	/** 스킬 효과 적용 (GameplayEffect + Ability) */
 	void ApplySkillEffects(UBaseSkillData* SkillData);

@@ -9,6 +9,7 @@
 class UPlayerAttributeSet;
 class UPlayerHUD;
 class USkillComponent;
+class USkillTreeWidget;
 
 /**
  * 플레이어 전용 캐릭터 클래스
@@ -55,6 +56,14 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "UI")
 	TObjectPtr<UPlayerHUD> PlayerHUDWidget;
 
+	/** SkillTreeWidget 클래스 (Blueprint에서 설정) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<USkillTreeWidget> SkillTreeWidgetClass;
+
+	/** 현재 활성화된 SkillTreeWidget 인스턴스 */
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	TObjectPtr<USkillTreeWidget> SkillTreeWidget;
+
 public:
 	// 플레이어 입력 액션들
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
@@ -93,6 +102,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> SprintAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> ToggleSkillTreeAction;
+
 	// 테스트용 입력
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Debug")
 	TObjectPtr<UInputAction> TestSkillAction;
@@ -107,6 +119,7 @@ public:
 	void TryPickupItem(const FInputActionValue& Value);
 	void ReloadPressed(const FInputActionValue& Value);
 	void Sprint(const FInputActionValue& Value);
+	void ToggleSkillTree(const FInputActionValue& Value);
 
 	// 테스트용 함수
 	void TestAcquireSkill(const FInputActionValue& Value);

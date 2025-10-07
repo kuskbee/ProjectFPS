@@ -55,6 +55,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Info", meta = (ClampMin = 1, ClampMax = 5))
 	int32 SkillTier = 1;
 
+	/** 트리 UI 위치 - X 좌표 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Tree UI")
+	float TreePositionX = 0.0f;
+
+	/** 트리 UI 위치 - Y 좌표 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Tree UI")
+	float TreePositionY = 0.0f;
+
+
 	/** 필요 스킬 포인트 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Requirements")
 	int32 RequiredSkillPoints = 1;

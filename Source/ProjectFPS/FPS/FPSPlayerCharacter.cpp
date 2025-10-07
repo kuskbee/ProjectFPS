@@ -4,6 +4,7 @@
 #include "FPS/CharacterAttributeSet.h"
 #include "FPS/PlayerAttributeSet.h"
 #include "FPS/UI/PlayerHUD.h"
+#include "FPS/UI/SkillTreeWidget.h"
 #include "FPS/Components/WeaponSlotComponent.h"
 #include "FPS/Components/SkillComponent.h"
 #include "FPS/Weapons/FPSWeapon.h"
@@ -166,6 +167,12 @@ void AFPSPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		if (SprintAction)
 		{
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Triggered, this, &AFPSPlayerCharacter::Sprint);
+		}
+
+		// 스킬트리 UI 토글 입력 (T키)
+		if (ToggleSkillTreeAction)
+		{
+			EnhancedInputComponent->BindAction(ToggleSkillTreeAction, ETriggerEvent::Triggered, this, &AFPSPlayerCharacter::ToggleSkillTree);
 		}
 
 		// 테스트용 스킬 습득 입력 (K키)
@@ -680,5 +687,66 @@ void AFPSPlayerCharacter::TestAcquireSkill(const FInputActionValue& Value)
 	case ESkillAcquireResult::InvalidSkill:
 		UE_LOG(LogTemp, Warning, TEXT("TestAcquireSkill: 유효하지 않은 스킬 ID입니다. SkillDataArray에 해당 스킬을 추가하세요."));
 		break;
+	}
+}
+void AFPSPlayerCharacter::ToggleSkillTree(const FInputActionValue& Value)
+{
+	// PlayerController 체크 (AI는 UI 사용 안함)
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC)
+	{
+		return;
+	}
+
+	// 스킬트리 UI가 이미 열려 있으면 닫기
+	if (SkillTreeWidget && SkillTreeWidget->IsInViewport())
+	{
+		SkillTreeWidget->RemoveFromParent();
+		SkillTreeWidget = nullptr;
+
+		// 마우스 커서 숨기기, 게임 모드로 복귀
+		PC->SetShowMouseCursor(false);
+		PC->SetInputMode(FInputModeGameOnly());
+
+		UE_LOG(LogTemp, Log, TEXT("SkillTree UI 닫기"));
+		return;
+	}
+
+	// 스킬트리 UI 열기
+	if (!SkillComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ToggleSkillTree: SkillComponent가 없습니다."));
+		return;
+	}
+
+	if (!SkillTreeWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ToggleSkillTree: SkillTreeWidgetClass가 설정되지 않았습니다."));
+		return;
+	}
+
+	// 위젯 생성
+	SkillTreeWidget = CreateWidget<USkillTreeWidget>(PC, SkillTreeWidgetClass);
+	if (SkillTreeWidget)
+	{
+		// SkillComponent 연동
+		SkillTreeWidget->InitializeSkillTree(SkillComponent);
+
+		// 스킬 포인트 표시
+		if (PlayerAttributeSet)
+		{
+			SkillTreeWidget->UpdateSkillPointDisplay(PlayerAttributeSet->GetSkillPoint());
+		}
+
+		// 화면에 추가
+		SkillTreeWidget->AddToViewport();
+
+		// 마우스 커서 표시, UI 모드로 전환
+		PC->SetShowMouseCursor(true);
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(SkillTreeWidget->TakeWidget());
+		PC->SetInputMode(InputMode);
+
+		UE_LOG(LogTemp, Log, TEXT("SkillTree UI 열기"));
 	}
 }

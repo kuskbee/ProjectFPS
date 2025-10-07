@@ -200,3 +200,9 @@ void USkillComponent::ApplySkillEffects(UBaseSkillData* SkillData)
 		}
 	}
 }
+
+bool USkillComponent::LearnSkill(const FGameplayTag& SkillID)
+{
+	ESkillAcquireResult Result = TryAcquireSkill(SkillID);
+	return Result == ESkillAcquireResult::Success;
+}
