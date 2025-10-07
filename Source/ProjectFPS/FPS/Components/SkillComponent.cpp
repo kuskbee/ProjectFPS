@@ -117,7 +117,7 @@ bool USkillComponent::CanAcquireSkill(const FGameplayTag& SkillID) const
 		return false;
 	}
 
-	// 선행 스킬 확인 (OR 조건: 하나라도 습득했으면 통과)
+	// 1. 선행 스킬 확인 (OR 조건: 하나라도 습득했으면 통과)
 	if (SkillData->PrerequisiteSkills.Num() > 0)
 	{
 		bool bHasAnyPrerequisite = false;
@@ -133,6 +133,27 @@ bool USkillComponent::CanAcquireSkill(const FGameplayTag& SkillID) const
 		if (!bHasAnyPrerequisite)
 		{
 			UE_LOG(LogTemp, VeryVerbose, TEXT("선행 스킬 조건 미충족"));
+			return false;
+		}
+	}
+
+	// 2. 상호배타적 스킬 확인 (이미 습득한 스킬과 충돌하는지 체크)
+	for (const FGameplayTag& ExclusiveSkill : SkillData->MutuallyExclusiveSkills)
+	{
+		if (HasSkill(ExclusiveSkill))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("상호배타적 스킬 이미 습득됨: %s"), *ExclusiveSkill.ToString());
+			return false;
+		}
+	}
+
+	// 3. 역방향 체크: 이미 습득한 스킬 중에 이 스킬을 배타적으로 막는 스킬이 있는지
+	for (const FGameplayTag& AcquiredSkillID : AcquiredSkills)
+	{
+		UBaseSkillData* AcquiredSkillData = FindSkillData(AcquiredSkillID);
+		if (AcquiredSkillData && AcquiredSkillData->MutuallyExclusiveSkills.Contains(SkillID))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("이미 습득한 스킬이 이 스킬을 막음: %s"), *AcquiredSkillID.ToString());
 			return false;
 		}
 	}
@@ -194,9 +215,21 @@ void USkillComponent::ApplySkillEffects(UBaseSkillData* SkillData)
 	{
 		if (AbilityClass)
 		{
-			FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, SkillData);
+			FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, GetOwner());
 			CachedASC->GiveAbility(AbilitySpec);
 			UE_LOG(LogTemp, Log, TEXT("GameplayAbility 부여: %s"), *AbilityClass->GetName());
+
+			// 액티브 스킬인 경우 AbilityTag 저장 (Q키용)
+			if (SkillData->SkillType == ESkillType::Active && AbilityClass.GetDefaultObject())
+			{
+				const UGameplayAbility* AbilityCDO = AbilityClass.GetDefaultObject();
+				if (AbilityCDO->AbilityTags.Num() > 0)
+				{
+					// 첫 번째 태그를 액티브 스킬 태그로 저장
+					ActiveSkillAbilityTag = AbilityCDO->AbilityTags.First();
+					UE_LOG(LogTemp, Log, TEXT("액티브 스킬 태그 저장: %s"), *ActiveSkillAbilityTag.ToString());
+				}
+			}
 		}
 	}
 }

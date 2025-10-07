@@ -105,6 +105,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> ToggleSkillTreeAction;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> ActiveSkillAction;
+
 	// 테스트용 입력
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Debug")
 	TObjectPtr<UInputAction> TestSkillAction;
@@ -120,6 +123,7 @@ public:
 	void ReloadPressed(const FInputActionValue& Value);
 	void Sprint(const FInputActionValue& Value);
 	void ToggleSkillTree(const FInputActionValue& Value);
+	void UseActiveSkill(const FInputActionValue& Value);
 
 	// 테스트용 함수
 	void TestAcquireSkill(const FInputActionValue& Value);

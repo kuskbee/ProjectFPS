@@ -16,6 +16,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Abilities/GameplayAbility.h"
 
 AFPSPlayerCharacter::AFPSPlayerCharacter()
 {
@@ -173,6 +174,12 @@ void AFPSPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		if (ToggleSkillTreeAction)
 		{
 			EnhancedInputComponent->BindAction(ToggleSkillTreeAction, ETriggerEvent::Triggered, this, &AFPSPlayerCharacter::ToggleSkillTree);
+		}
+
+		// 액티브 스킬 사용 입력 (Q키)
+		if (ActiveSkillAction)
+		{
+			EnhancedInputComponent->BindAction(ActiveSkillAction, ETriggerEvent::Triggered, this, &AFPSPlayerCharacter::UseActiveSkill);
 		}
 
 		// 테스트용 스킬 습득 입력 (K키)
@@ -689,6 +696,60 @@ void AFPSPlayerCharacter::TestAcquireSkill(const FInputActionValue& Value)
 		break;
 	}
 }
+
+void AFPSPlayerCharacter::UseActiveSkill(const FInputActionValue& Value)
+{
+	if (!AbilitySystemComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UseActiveSkill: AbilitySystemComponent가 없음"));
+		return;
+	}
+
+	// 현재 부여된 Ability 목록 출력 (디버깅)
+	TArray<FGameplayAbilitySpec>& ActivatableAbilities = AbilitySystemComponent->GetActivatableAbilities();
+	UE_LOG(LogTemp, Log, TEXT("=== 현재 부여된 Ability 목록 (%d개) ==="), ActivatableAbilities.Num());
+	for (const FGameplayAbilitySpec& Spec : ActivatableAbilities)
+	{
+		if (Spec.Ability)
+		{
+			// AbilityTags는 직접 접근
+			const FGameplayTagContainer& SpecAbilityTags = Spec.Ability->AbilityTags;
+			FString TagsString = SpecAbilityTags.ToStringSimple();
+			UE_LOG(LogTemp, Log, TEXT("  - %s (Tags: %s)"), *Spec.Ability->GetName(), *TagsString);
+		}
+	}
+
+	// SkillComponent에서 습득한 액티브 스킬 태그 가져오기
+	if (!SkillComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UseActiveSkill: SkillComponent가 없음"));
+		return;
+	}
+
+	FGameplayTag ActiveSkillTag = SkillComponent->GetActiveSkillAbilityTag();
+	if (!ActiveSkillTag.IsValid())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UseActiveSkill: 습득한 액티브 스킬이 없음"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("찾으려는 태그: %s"), *ActiveSkillTag.ToString());
+
+	// 액티브 스킬 활성화
+	FGameplayTagContainer AbilityTags;
+	AbilityTags.AddTag(ActiveSkillTag);
+
+	bool bActivated = AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTags);
+	if (!bActivated)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UseActiveSkill: 액티브 스킬이 없거나 사용할 수 없음 (쿨다운 중?)"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("UseActiveSkill: 액티브 스킬 활성화 성공!"));
+	}
+}
+
 void AFPSPlayerCharacter::ToggleSkillTree(const FInputActionValue& Value)
 {
 	// PlayerController 체크 (AI는 UI 사용 안함)

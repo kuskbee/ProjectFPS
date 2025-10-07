@@ -79,6 +79,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Skills")
 	bool IsSkillLearned(const FGameplayTag& SkillID) const { return HasSkill(SkillID); }
 
+	/** 습득한 액티브 스킬의 AbilityTag 반환 (Q키용) */
+	UFUNCTION(BlueprintPure, Category = "Skills")
+	FGameplayTag GetActiveSkillAbilityTag() const { return ActiveSkillAbilityTag; }
+
 private:
 	/** 스킬 효과 적용 (GameplayEffect + Ability) */
 	void ApplySkillEffects(UBaseSkillData* SkillData);
@@ -89,4 +93,7 @@ private:
 
 	/** Owner의 AbilitySystemComponent 캐싱 */
 	TWeakObjectPtr<UAbilitySystemComponent> CachedASC;
+
+	/** 습득한 액티브 스킬의 AbilityTag (Q키로 활성화) */
+	FGameplayTag ActiveSkillAbilityTag;
 };

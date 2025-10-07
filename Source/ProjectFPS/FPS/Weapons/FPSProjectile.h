@@ -61,6 +61,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Damage")
 	void SetDamage(float NewDamage) { Damage = NewDamage; }
 
+	/** 데미지 값 반환 함수 */
+	UFUNCTION(BlueprintPure, Category = "Damage")
+	float GetDamage() const { return Damage; }
+
 	// ========================================
 	// Visual/Audio Effects
 	// ========================================

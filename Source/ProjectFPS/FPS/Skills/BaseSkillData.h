@@ -72,6 +72,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Requirements")
 	TArray<FGameplayTag> PrerequisiteSkills;
 
+	/** 상호배타적 스킬 (이 스킬을 배우면 습득 불가능한 스킬들)
+	 * 예: Shield 브랜치 스킬을 배우면 Crit 브랜치 스킬 습득 불가 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Requirements")
+	TArray<FGameplayTag> MutuallyExclusiveSkills;
+
 	/** 스킬 습득 시 적용할 GameplayEffect */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill Effects")
 	TArray<TSubclassOf<UGameplayEffect>> SkillEffects;
