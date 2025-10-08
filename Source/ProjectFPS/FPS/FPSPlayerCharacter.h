@@ -36,6 +36,7 @@ public:
 	virtual void OnStaminaChanged(const FOnAttributeChangeData& Data) override;
 	virtual void OnShieldChanged(const FOnAttributeChangeData& Data) override;
 	virtual void OnSkillPointChanged(const FOnAttributeChangeData& Data);
+	virtual void OnMoveSpeedMultiplierChanged(const FOnAttributeChangeData& Data);
 
 protected:
 	// Player 전용 AttributeSet

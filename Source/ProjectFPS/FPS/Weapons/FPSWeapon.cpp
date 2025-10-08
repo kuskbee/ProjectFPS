@@ -274,13 +274,13 @@ void AFPSWeapon::Fire()
 	// 자동 무기의 연사 처리
 	if (WeaponItemData->bIsAutomatic && bIsFiring)
 	{
-		// 다음 발사 예약
-		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AFPSWeapon::Fire, WeaponItemData->GetRefireRate(), false);
+		// 다음 발사 예약 (AttackSpeedMultiplier 반영)
+		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AFPSWeapon::Fire, GetCurrentRefireRate(), false);
 	}
 	else
 	{
-		// 반자동 무기의 경우, 쿨다운 알림 예약
-		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AFPSWeapon::FireCooldownExpired, WeaponItemData->GetRefireRate(), false);
+		// 반자동 무기의 경우, 쿨다운 알림 예약 (AttackSpeedMultiplier 반영)
+		GetWorld()->GetTimerManager().SetTimer(RefireTimer, this, &AFPSWeapon::FireCooldownExpired, GetCurrentRefireRate(), false);
 	}
 }
 
@@ -616,4 +616,51 @@ float AFPSWeapon::CalculateFinalDamage() const
 
 	// 일반 공격
 	return BaseDamage;
+}
+
+float AFPSWeapon::GetCurrentRefireRate() const
+{
+	if (!WeaponItemData)
+	{
+		return 1.0f;
+	}
+
+	// 기본 연사 간격 (FireRate의 역수)
+	float BaseRefireRate = WeaponItemData->GetRefireRate();
+
+	// AttackSpeedMultiplier가 없으면 기본값 반환
+	if (!PawnOwner)
+	{
+		return BaseRefireRate;
+	}
+
+	// AbilitySystemComponent 가져오기
+	IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(PawnOwner);
+	if (!ASI)
+	{
+		return BaseRefireRate;
+	}
+
+	UAbilitySystemComponent* ASC = ASI->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		return BaseRefireRate;
+	}
+
+	// PlayerAttributeSet 가져오기 (플레이어만 AttackSpeedMultiplier 보유)
+	const UPlayerAttributeSet* PlayerAttrSet = ASC->GetSet<UPlayerAttributeSet>();
+	if (!PlayerAttrSet)
+	{
+		// 적 AI 등 PlayerAttributeSet 없으면 기본값
+		return BaseRefireRate;
+	}
+
+	// AttackSpeedMultiplier 가져오기 (1.0 = 기본, 1.5 = 50% 빠름)
+	float AttackSpeedMultiplier = PlayerAttrSet->GetAttackSpeedMultiplier();
+
+	// 연사 간격을 AttackSpeedMultiplier로 나눔 (곱하기가 아님!)
+	// 예: BaseRefireRate = 1.0초, AttackSpeedMultiplier = 1.5 → 0.667초 (50% 빠름)
+	float FinalRefireRate = BaseRefireRate / AttackSpeedMultiplier;
+
+	return FinalRefireRate;
 }

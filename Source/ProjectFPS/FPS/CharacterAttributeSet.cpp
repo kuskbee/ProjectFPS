@@ -122,7 +122,7 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	UE_LOG(LogTemp, Warning, TEXT("PostGameplayEffectExecute 호출됨! Attribute: %s"), *Data.EvaluatedData.Attribute.GetName());
+	UE_LOG(LogTemp, VeryVerbose, TEXT("PostGameplayEffectExecute 호출됨! Attribute: %s"), *Data.EvaluatedData.Attribute.GetName());
 
 	// Health 데미지 처리 - Shield 우선 소모
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())

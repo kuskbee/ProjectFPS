@@ -30,29 +30,44 @@ void UGameplayAbility_Sprint::ActivateAbility(
 		return;
 	}
 
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
-	if (!Character || !Character->GetCharacterMovement())
+	// 1. 이동 속도 증가 GameplayEffect 적용 (SetByCaller 방식)
+	if (SprintSpeedEffect && ActorInfo->AbilitySystemComponent.IsValid())
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
+		FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
+		ContextHandle.AddSourceObject(this);
+
+		FGameplayEffectSpecHandle SpecHandle = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
+			SprintSpeedEffect,
+			GetAbilityLevel(),
+			ContextHandle
+		);
+
+		if (SpecHandle.IsValid())
+		{
+			// SetByCaller로 SprintSpeedBoost 값 전달
+			SpecHandle.Data->SetSetByCallerMagnitude(
+				FGameplayTag::RequestGameplayTag(FName("Data.SprintSpeed")),
+				SprintSpeedBoost
+			);
+
+			ActiveSprintSpeedHandle = ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(
+				*SpecHandle.Data.Get()
+			);
+
+			UE_LOG(LogTemp, Log, TEXT("Sprint 시작: 이동속도 +%.0f%% (%.2f배)"),
+				SprintSpeedBoost * 100.0f, 1.0f + SprintSpeedBoost);
+		}
 	}
 
-	// 1. 기본 이동 속도 저장
-	UCharacterMovementComponent* MovementComp = Character->GetCharacterMovement();
-	OriginalMaxWalkSpeed = MovementComp->MaxWalkSpeed;
-
-	// 2. 이동 속도 증가
-	MovementComp->MaxWalkSpeed = OriginalMaxWalkSpeed * SprintSpeedMultiplier;
-
-	// 3. 스태미나 회복 Effect 제거 (Sprint 중에는 회복 안됨)
+	// 2. 스태미나 회복 Effect 제거 (Sprint 중에는 회복 안됨)
 	if (ActiveStaminaRecoverHandle.IsValid() && ActorInfo->AbilitySystemComponent.IsValid())
 	{
 		ActorInfo->AbilitySystemComponent->RemoveActiveGameplayEffect(ActiveStaminaRecoverHandle);
 		ActiveStaminaRecoverHandle.Invalidate();
-		UE_LOG(LogTemp, Log, TEXT("Sprint 시작: 스태미나 회복 중단"));
+		UE_LOG(LogTemp, Log, TEXT("스태미나 회복 중단"));
 	}
 
-	// 4. 스태미나 소모 GameplayEffect 적용 (Periodic)
+	// 3. 스태미나 소모 GameplayEffect 적용 (Periodic)
 	if (StaminaDrainEffect)
 	{
 		FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
@@ -71,9 +86,6 @@ void UGameplayAbility_Sprint::ActivateAbility(
 			);
 		}
 	}
-
-	UE_LOG(LogTemp, Log, TEXT("Sprint 시작: 이동속도 %.0f -> %.0f"),
-		OriginalMaxWalkSpeed, MovementComp->MaxWalkSpeed);
 }
 
 void UGameplayAbility_Sprint::EndAbility(
@@ -83,12 +95,12 @@ void UGameplayAbility_Sprint::EndAbility(
 	bool bReplicateEndAbility,
 	bool bWasCancelled)
 {
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
-	if (Character && Character->GetCharacterMovement())
+	// 1. 이동 속도 증가 Effect 제거 (자동 복구)
+	if (ActiveSprintSpeedHandle.IsValid() && ActorInfo->AbilitySystemComponent.IsValid())
 	{
-		// 1. 이동 속도 복구
-		Character->GetCharacterMovement()->MaxWalkSpeed = OriginalMaxWalkSpeed;
-		UE_LOG(LogTemp, Log, TEXT("Sprint 종료: 이동속도 복구 %.0f"), OriginalMaxWalkSpeed);
+		ActorInfo->AbilitySystemComponent->RemoveActiveGameplayEffect(ActiveSprintSpeedHandle);
+		ActiveSprintSpeedHandle.Invalidate();
+		UE_LOG(LogTemp, Log, TEXT("Sprint 종료: 이동속도 복구"));
 	}
 
 	// 2. 스태미나 소모 Effect 제거

@@ -223,10 +223,11 @@ void USkillComponent::ApplySkillEffects(UBaseSkillData* SkillData)
 			if (SkillData->SkillType == ESkillType::Active && AbilityClass.GetDefaultObject())
 			{
 				const UGameplayAbility* AbilityCDO = AbilityClass.GetDefaultObject();
-				if (AbilityCDO->AbilityTags.Num() > 0)
+				const FGameplayTagContainer& AssetTags = AbilityCDO->GetAssetTags();
+				if (AssetTags.Num() > 0)
 				{
 					// 첫 번째 태그를 액티브 스킬 태그로 저장
-					ActiveSkillAbilityTag = AbilityCDO->AbilityTags.First();
+					ActiveSkillAbilityTag = AssetTags.First();
 					UE_LOG(LogTemp, Log, TEXT("액티브 스킬 태그 저장: %s"), *ActiveSkillAbilityTag.ToString());
 				}
 			}

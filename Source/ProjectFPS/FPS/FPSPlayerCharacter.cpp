@@ -17,6 +17,7 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Abilities/GameplayAbility.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 AFPSPlayerCharacter::AFPSPlayerCharacter()
 {
@@ -61,6 +62,9 @@ void AFPSPlayerCharacter::BeginPlay()
 
 		// SkillPoint 속성 변경에 바인딩
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UPlayerAttributeSet::GetSkillPointAttribute()).AddUObject(this, &AFPSPlayerCharacter::OnSkillPointChanged);
+
+		// MoveSpeedMultiplier 속성 변경에 바인딩
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UPlayerAttributeSet::GetMoveSpeedMultiplierAttribute()).AddUObject(this, &AFPSPlayerCharacter::OnMoveSpeedMultiplierChanged);
 	}
 
 	// PlayerHUD 생성
@@ -269,6 +273,21 @@ void AFPSPlayerCharacter::OnSkillPointChanged(const FOnAttributeChangeData& Data
 	UE_LOG(LogTemp, Log, TEXT("SkillPoint 변경: %.0f"), Data.NewValue);
 
 	// TODO: 스킬트리 UI가 있다면 여기서 업데이트
+}
+
+void AFPSPlayerCharacter::OnMoveSpeedMultiplierChanged(const FOnAttributeChangeData& Data)
+{
+	// MoveSpeedMultiplier 변경 시 CharacterMovement MaxWalkSpeed 업데이트
+	if (GetCharacterMovement())
+	{
+		const float BaseWalkSpeed = 600.0f;
+		const float NewMaxWalkSpeed = BaseWalkSpeed * Data.NewValue;
+
+		GetCharacterMovement()->MaxWalkSpeed = NewMaxWalkSpeed;
+
+		UE_LOG(LogTemp, Warning, TEXT("🏃 MoveSpeedMultiplier 변경: %.2fx → MaxWalkSpeed: %.0f"),
+			Data.NewValue, NewMaxWalkSpeed);
+	}
 }
 
 // === 플레이어 전용 입력 핸들러들 ===
@@ -712,8 +731,8 @@ void AFPSPlayerCharacter::UseActiveSkill(const FInputActionValue& Value)
 	{
 		if (Spec.Ability)
 		{
-			// AbilityTags는 직접 접근
-			const FGameplayTagContainer& SpecAbilityTags = Spec.Ability->AbilityTags;
+			// GetAssetTags()로 태그 가져오기
+			const FGameplayTagContainer& SpecAbilityTags = Spec.Ability->GetAssetTags();
 			FString TagsString = SpecAbilityTags.ToStringSimple();
 			UE_LOG(LogTemp, Log, TEXT("  - %s (Tags: %s)"), *Spec.Ability->GetName(), *TagsString);
 		}

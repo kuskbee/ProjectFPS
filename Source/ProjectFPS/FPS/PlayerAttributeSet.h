@@ -41,6 +41,16 @@ public:
 	FGameplayAttributeData CritDamage;
 	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, CritDamage);
 
+	// Attack Speed Multiplier (공격속도 배율, 1.0 = 기본, 1.5 = 50% 증가)
+	UPROPERTY(BlueprintReadOnly, Category = "Player Attributes", ReplicatedUsing = OnRep_AttackSpeedMultiplier)
+	FGameplayAttributeData AttackSpeedMultiplier;
+	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, AttackSpeedMultiplier);
+
+	// Move Speed Multiplier (이동속도 배율, 1.0 = 기본, 1.3 = 30% 증가)
+	UPROPERTY(BlueprintReadOnly, Category = "Player Attributes", ReplicatedUsing = OnRep_MoveSpeedMultiplier)
+	FGameplayAttributeData MoveSpeedMultiplier;
+	ATTRIBUTE_ACCESSORS(UPlayerAttributeSet, MoveSpeedMultiplier);
+
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -52,6 +62,12 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_CritDamage(const FGameplayAttributeData& OldCritDamage);
+
+	UFUNCTION()
+	virtual void OnRep_AttackSpeedMultiplier(const FGameplayAttributeData& OldAttackSpeedMultiplier);
+
+	UFUNCTION()
+	virtual void OnRep_MoveSpeedMultiplier(const FGameplayAttributeData& OldMoveSpeedMultiplier);
 
 	// PreAttributeChange: Attribute 값 변경 전 클램핑 처리
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;

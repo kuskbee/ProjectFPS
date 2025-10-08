@@ -172,6 +172,9 @@ protected:
 	/** 크리티컬 데미지 계산 (CritChance/CritDamage 기반) */
 	float CalculateFinalDamage() const;
 
+	/** AttackSpeedMultiplier를 반영한 실제 연사 간격 반환 */
+	float GetCurrentRefireRate() const;
+
 public:
 
 	/** 1인칭 메시 반환 */

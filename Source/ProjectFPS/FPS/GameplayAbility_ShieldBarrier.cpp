@@ -11,8 +11,10 @@ UGameplayAbility_ShieldBarrier::UGameplayAbility_ShieldBarrier()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 
-	// Tag 설정
-	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.ShieldBarrier")));
+	// Tag 설정 (SetAssetTags 사용)
+	FGameplayTagContainer Tags;
+	Tags.AddTag(FGameplayTag::RequestGameplayTag(FName("Ability.ShieldBarrier")));
+	SetAssetTags(Tags);
 }
 
 void UGameplayAbility_ShieldBarrier::ActivateAbility(const FGameplayAbilitySpecHandle Handle,

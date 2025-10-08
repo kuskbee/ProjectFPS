@@ -51,9 +51,13 @@ public:
 	) const override;
 
 protected:
-	// 질주 시 이동 속도 배율 (기본값: 1.5배)
+	// 질주 시 이동 속도 증가량 (기본값: 1.0, 즉 +100% → 2배)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sprint")
-	float SprintSpeedMultiplier = 1.5f;
+	float SprintSpeedBoost = 1.0f;
+
+	// 이동 속도 증가 GameplayEffect (Infinite)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sprint")
+	TSubclassOf<class UGameplayEffect> SprintSpeedEffect;
 
 	// 스태미나 소모 GameplayEffect (Periodic)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Sprint")
@@ -64,12 +68,12 @@ protected:
 	TSubclassOf<class UGameplayEffect> StaminaRecoverEffect;
 
 private:
+	// 적용된 SprintSpeed Effect의 핸들 (Sprint 종료 시 제거용)
+	FActiveGameplayEffectHandle ActiveSprintSpeedHandle;
+
 	// 적용된 StaminaDrain Effect의 핸들 (Sprint 종료 시 제거용)
 	FActiveGameplayEffectHandle ActiveStaminaDrainHandle;
 
 	// 적용된 StaminaRecover Effect의 핸들 (Sprint 시작 시 제거용)
 	FActiveGameplayEffectHandle ActiveStaminaRecoverHandle;
-
-	// 기본 이동 속도 (복구용)
-	float OriginalMaxWalkSpeed = 0.0f;
 };
