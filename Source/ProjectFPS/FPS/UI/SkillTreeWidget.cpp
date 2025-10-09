@@ -12,6 +12,7 @@
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
 #include "PlayerAttributeSet.h"
+#include "FPSPlayerCharacter.h"
 
 void USkillTreeWidget::NativeConstruct()
 {
@@ -120,6 +121,27 @@ void USkillTreeWidget::UpdateSkillPointDisplay(int32 CurrentPoints)
 
 void USkillTreeWidget::OnCloseButtonClicked()
 {
-	// UI 닫기
-	RemoveFromParent();
+	// PlayerController 가져오기
+	APlayerController* PC = GetOwningPlayer();
+	if (!PC)
+	{
+		// Controller 없으면 그냥 UI만 닫기
+		RemoveFromParent();
+		return;
+	}
+
+	// T키 입력 시뮬레이션 (ToggleSkillTree 재호출)
+	// 이렇게 하면 PlayerCharacter의 상태 정리 로직이 자동으로 실행됨
+	if (AFPSPlayerCharacter* PlayerCharacter = Cast<AFPSPlayerCharacter>(PC->GetPawn()))
+	{
+		// ToggleSkillTree() 호출로 상태 정리
+		PlayerCharacter->ToggleSkillTree(FInputActionValue());
+	}
+	else
+	{
+		// FPSPlayerCharacter가 아니면 수동으로 정리
+		RemoveFromParent();
+		PC->SetShowMouseCursor(false);
+		PC->SetInputMode(FInputModeGameOnly());
+	}
 }

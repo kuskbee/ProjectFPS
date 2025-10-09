@@ -20,6 +20,7 @@ public class ProjectFPS : ModuleRules
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
+			"SlateCore",
             "GameplayAbilities",
             "GameplayTags",
             "GameplayTasks",

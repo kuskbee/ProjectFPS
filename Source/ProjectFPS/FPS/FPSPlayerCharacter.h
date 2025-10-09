@@ -11,6 +11,7 @@ class UPlayerHUD;
 class USkillComponent;
 class USkillTreeWidget;
 class UInventoryComponent;
+class UInventoryWidget;
 
 /**
  * 플레이어 전용 캐릭터 클래스
@@ -71,6 +72,14 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "UI")
 	TObjectPtr<USkillTreeWidget> SkillTreeWidget;
 
+	/** InventoryWidget 클래스 (Blueprint에서 설정) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UInventoryWidget> InventoryWidgetClass;
+
+	/** 현재 활성화된 InventoryWidget 인스턴스 */
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UInventoryWidget> InventoryWidget;
+
 public:
 	// 플레이어 입력 액션들
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
@@ -113,6 +122,9 @@ public:
 	TObjectPtr<UInputAction> ToggleSkillTreeAction;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
+	TObjectPtr<UInputAction> ToggleInventoryAction;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> ActiveSkillAction;
 
 	// 테스트용 입력
@@ -130,6 +142,7 @@ public:
 	void ReloadPressed(const FInputActionValue& Value);
 	void Sprint(const FInputActionValue& Value);
 	void ToggleSkillTree(const FInputActionValue& Value);
+	void ToggleInventory(const FInputActionValue& Value);
 	void UseActiveSkill(const FInputActionValue& Value);
 
 	// 테스트용 함수

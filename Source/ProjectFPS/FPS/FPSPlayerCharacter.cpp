@@ -5,6 +5,7 @@
 #include "FPS/PlayerAttributeSet.h"
 #include "FPS/UI/PlayerHUD.h"
 #include "FPS/UI/SkillTreeWidget.h"
+#include "FPS/UI/InventoryWidget.h"
 #include "FPS/Components/WeaponSlotComponent.h"
 #include "FPS/Components/SkillComponent.h"
 #include "FPS/Components/InventoryComponent.h"
@@ -182,6 +183,12 @@ void AFPSPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		if (ToggleSkillTreeAction)
 		{
 			EnhancedInputComponent->BindAction(ToggleSkillTreeAction, ETriggerEvent::Triggered, this, &AFPSPlayerCharacter::ToggleSkillTree);
+		}
+
+		// 인벤토리 UI 토글 입력 (I키)
+		if (ToggleInventoryAction)
+		{
+			EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Triggered, this, &AFPSPlayerCharacter::ToggleInventory);
 		}
 
 		// 액티브 스킬 사용 입력 (Q키)
@@ -832,5 +839,61 @@ void AFPSPlayerCharacter::ToggleSkillTree(const FInputActionValue& Value)
 		PC->SetInputMode(InputMode);
 
 		UE_LOG(LogTemp, Log, TEXT("SkillTree UI 열기"));
+	}
+}
+
+void AFPSPlayerCharacter::ToggleInventory(const FInputActionValue& Value)
+{
+	// PlayerController 체크 (AI는 UI 사용 안함)
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC)
+	{
+		return;
+	}
+
+	// 인벤토리 UI가 이미 열려 있으면 닫기
+	if (InventoryWidget && InventoryWidget->IsInViewport())
+	{
+		InventoryWidget->RemoveFromParent();
+		InventoryWidget = nullptr;
+
+		// 마우스 커서 숨기기, 게임 모드로 복귀
+		PC->SetShowMouseCursor(false);
+		PC->SetInputMode(FInputModeGameOnly());
+
+		UE_LOG(LogTemp, Log, TEXT("Inventory UI 닫기"));
+		return;
+	}
+
+	// 인벤토리 UI 열기
+	if (!InventoryComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ToggleInventory: InventoryComponent가 없습니다."));
+		return;
+	}
+
+	if (!InventoryWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ToggleInventory: InventoryWidgetClass가 설정되지 않았습니다."));
+		return;
+	}
+
+	// 위젯 생성
+	InventoryWidget = CreateWidget<UInventoryWidget>(PC, InventoryWidgetClass);
+	if (InventoryWidget)
+	{
+		// InventoryComponent 연동
+		InventoryWidget->InitializeInventory(InventoryComponent);
+
+		// 화면에 추가
+		InventoryWidget->AddToViewport();
+
+		// 마우스 커서 표시, UI 모드로 전환
+		PC->SetShowMouseCursor(true);
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(InventoryWidget->TakeWidget());
+		PC->SetInputMode(InputMode);
+
+		UE_LOG(LogTemp, Log, TEXT("Inventory UI 열기"));
 	}
 }

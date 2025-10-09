@@ -155,6 +155,18 @@ public:
 	UBaseItemData* GetItemAt(int32 GridX, int32 GridY) const;
 
 	/**
+	 * 그리드 가로 크기 반환
+	 */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 GetGridWidth() const { return GridWidth; }
+
+	/**
+	 * 그리드 세로 크기 반환
+	 */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 GetGridHeight() const { return GridHeight; }
+
+	/**
 	 * 특정 위치의 아이템 Origin 좌표 찾기
 	 * @param GridX X 좌표
 	 * @param GridY Y 좌표
