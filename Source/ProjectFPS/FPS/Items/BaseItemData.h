@@ -58,6 +58,26 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info", meta = (ClampMin = 0))
 	int32 ItemValue = 0;
 
+	// ==================== 인벤토리 시스템 ====================
+
+	/** 인벤토리 그리드 가로 크기 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (ClampMin = 1, ClampMax = 8))
+	int32 GridWidth = 1;
+
+	/** 인벤토리 그리드 세로 크기 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (ClampMin = 1, ClampMax = 6))
+	int32 GridHeight = 1;
+
+	// ==================== 월드 메시 (드롭/픽업용) ====================
+
+	/** 월드에 드롭될 때 사용할 SkeletalMesh (무기 등) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "World Mesh")
+	TObjectPtr<USkeletalMesh> WorldSkeletalMesh;
+
+	/** 월드에 드롭될 때 사용할 StaticMesh (포션, 장비 등) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "World Mesh")
+	TObjectPtr<UStaticMesh> WorldStaticMesh;
+
 public:
 	/** 아이템 타입 반환 */
 	UFUNCTION(BlueprintPure, Category = "Item")
@@ -70,4 +90,16 @@ public:
 	/** 아이템 이름 반환 */
 	UFUNCTION(BlueprintPure, Category = "Item")
 	FString GetItemName() const { return ItemName; }
+
+	/** 인벤토리 그리드 크기 반환 */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	FIntPoint GetGridSize() const { return FIntPoint(GridWidth, GridHeight); }
+
+	/** 월드 메시 반환 (SkeletalMesh 우선, 없으면 StaticMesh) */
+	UFUNCTION(BlueprintPure, Category = "World Mesh")
+	UObject* GetWorldMesh() const
+	{
+		if (WorldSkeletalMesh) return WorldSkeletalMesh;
+		return WorldStaticMesh;
+	}
 };

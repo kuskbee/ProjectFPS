@@ -24,6 +24,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AFPSWeapon> WeaponClass;
 
+	// ========================================
+	// 무기 메시 (BaseItemData::WorldSkeletalMesh = ThirdPersonMesh)
+	// ========================================
+
+	/** 1인칭 시점 무기 메시 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Mesh")
+	TObjectPtr<USkeletalMesh> FirstPersonMesh;
+
+	// 3인칭 메시는 BaseItemData::WorldSkeletalMesh 사용
+
 	/** 무기 데미지 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon Stats", meta = (ClampMin = 0))
 	int32 BaseDamage = 10;
@@ -109,4 +119,12 @@ public:
 	/** 발사 간격 계산 (FireRate -> RefireRate 변환) */
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	float GetRefireRate() const { return FireRate > 0.0f ? 1.0f / FireRate : 1.0f; }
+
+	/** 1인칭 메시 반환 */
+	UFUNCTION(BlueprintPure, Category = "Weapon Mesh")
+	USkeletalMesh* GetFirstPersonMesh() const { return FirstPersonMesh; }
+
+	/** 3인칭 메시 반환 (BaseItemData::WorldSkeletalMesh) */
+	UFUNCTION(BlueprintPure, Category = "Weapon Mesh")
+	USkeletalMesh* GetThirdPersonMesh() const { return WorldSkeletalMesh; }
 };

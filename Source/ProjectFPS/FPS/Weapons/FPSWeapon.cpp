@@ -438,6 +438,24 @@ void AFPSWeapon::SetWeaponItemData(UWeaponItemData* ItemData)
 
 	WeaponItemData = ItemData;
 
+	// ========================================
+	// 메시 적용 (WeaponItemData에서 메시 가져오기)
+	// ========================================
+
+	// 1인칭 메시 설정
+	if (FirstPersonMesh && ItemData->GetFirstPersonMesh())
+	{
+		FirstPersonMesh->SetSkeletalMesh(ItemData->GetFirstPersonMesh());
+		UE_LOG(LogTemp, Log, TEXT("1인칭 무기 메시 설정: %s"), *ItemData->GetFirstPersonMesh()->GetName());
+	}
+
+	// 3인칭 메시 설정 (BaseItemData::WorldSkeletalMesh)
+	if (ThirdPersonMesh && ItemData->GetThirdPersonMesh())
+	{
+		ThirdPersonMesh->SetSkeletalMesh(ItemData->GetThirdPersonMesh());
+		UE_LOG(LogTemp, Log, TEXT("3인칭 무기 메시 설정: %s"), *ItemData->GetThirdPersonMesh()->GetName());
+	}
+
 	// HUD 업데이트
 	if (WeaponOwner)
 	{

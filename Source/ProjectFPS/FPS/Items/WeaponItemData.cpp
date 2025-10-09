@@ -9,6 +9,10 @@ UWeaponItemData::UWeaponItemData()
 	ItemType = EItemType::Weapon;
 	MaxStackSize = 1; // 무기는 스택 불가
 
+	// 인벤토리 크기 (무기는 세로로 길게, 2x4)
+	GridWidth = 2;
+	GridHeight = 4;
+
 	// 무기 기본 스탯
 	BaseDamage = 10;
 	FireRate = 1.0f;
