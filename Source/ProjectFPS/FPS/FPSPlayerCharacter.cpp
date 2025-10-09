@@ -7,6 +7,7 @@
 #include "FPS/UI/SkillTreeWidget.h"
 #include "FPS/Components/WeaponSlotComponent.h"
 #include "FPS/Components/SkillComponent.h"
+#include "FPS/Components/InventoryComponent.h"
 #include "FPS/Weapons/FPSWeapon.h"
 #include "FPS/Items/WeaponItemData.h"
 #include "FPS/Interfaces/Pickupable.h"
@@ -23,6 +24,9 @@ AFPSPlayerCharacter::AFPSPlayerCharacter()
 {
 	// SkillComponent 생성
 	SkillComponent = CreateDefaultSubobject<USkillComponent>(TEXT("SkillComponent"));
+
+	// InventoryComponent 생성
+	InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 void AFPSPlayerCharacter::BeginPlay()

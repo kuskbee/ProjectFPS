@@ -10,6 +10,7 @@ class UPlayerAttributeSet;
 class UPlayerHUD;
 class USkillComponent;
 class USkillTreeWidget;
+class UInventoryComponent;
 
 /**
  * 플레이어 전용 캐릭터 클래스
@@ -47,6 +48,11 @@ protected:
 	/** 스킬 관리 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<USkillComponent> SkillComponent;
+
+	// 인벤토리 시스템
+	/** 인벤토리 관리 컴포넌트 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UInventoryComponent> InventoryComponent;
 
 	// UI 관련
 	/** PlayerHUD 위젯 클래스 (Blueprint에서 설정) */
@@ -135,4 +141,8 @@ public:
 	virtual void UpdateCrosshairMovementSpread(float Spread) override;
 	virtual void OnWeaponActivated(AFPSWeapon* Weapon) override;
 	virtual void OnWeaponDeactivated(AFPSWeapon* Weapon) override;
+
+	// 컴포넌트 Getter
+	UFUNCTION(BlueprintPure, Category = "Components")
+	UInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
 };
