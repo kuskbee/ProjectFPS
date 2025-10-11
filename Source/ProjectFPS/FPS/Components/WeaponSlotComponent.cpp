@@ -634,3 +634,71 @@ bool UWeaponSlotComponent::IsValidSlotIndex(int32 SlotIndex) const
 {
 	return SlotIndex >= 0 && SlotIndex < static_cast<int32>(EWeaponSlot::Max);
 }
+
+bool UWeaponSlotComponent::SwapWeaponSlots(EWeaponSlot SlotA, EWeaponSlot SlotB)
+{
+	// 유효성 체크
+	if (SlotA == SlotB || SlotA == EWeaponSlot::None || SlotB == EWeaponSlot::None)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SwapWeaponSlots: 잘못된 슬롯 타입"));
+		return false;
+	}
+
+	int32 IndexA = SlotTypeToIndex(SlotA);
+	int32 IndexB = SlotTypeToIndex(SlotB);
+
+	if (!IsValidSlotIndex(IndexA) || !IsValidSlotIndex(IndexB))
+	{
+		return false;
+	}
+
+	// 먼저 현재 활성화된 무기를 비활성화
+	if (WeaponHolder && SpawnedWeapons[ActiveSlotIndex])
+	{
+		WeaponHolder->OnWeaponDeactivated(SpawnedWeapons[ActiveSlotIndex]);
+	}
+
+	// 두 슬롯 데이터 교환 (배열만 Swap)
+	UWeaponItemData* TempWeapon = WeaponSlots[IndexA];
+	AFPSWeapon* TempActor = SpawnedWeapons[IndexA];
+
+	WeaponSlots[IndexA] = WeaponSlots[IndexB];
+	SpawnedWeapons[IndexA] = SpawnedWeapons[IndexB];
+
+	WeaponSlots[IndexB] = TempWeapon;
+	SpawnedWeapons[IndexB] = TempActor;
+
+	// 활성 슬롯은 유지하되, 해당 슬롯의 무기를 다시 활성화
+	// 현재 활성화된 슬롯의 무기를 다시 장착
+	AFPSWeapon* NewActiveWeapon = SpawnedWeapons[ActiveSlotIndex];
+
+	if (NewActiveWeapon)
+	{
+		// 모든 무기 비활성화 후 새 무기 활성화
+		for (int32 i = 0; i < static_cast<int32>(EWeaponSlot::Max); ++i)
+		{
+			if (i != ActiveSlotIndex && SpawnedWeapons[i])
+			{
+				SpawnedWeapons[i]->SetActorHiddenInGame(true);
+				SpawnedWeapons[i]->SetActorEnableCollision(false);
+			}
+		}
+
+		NewActiveWeapon->SetActorHiddenInGame(false);
+		NewActiveWeapon->SetActorEnableCollision(true);
+
+		if (WeaponHolder)
+		{
+			WeaponHolder->OnWeaponActivated(SpawnedWeapons[ActiveSlotIndex]);
+		}
+
+		UpdateWeaponHUD();
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("SwapWeaponSlots: %s <-> %s 교환 완료 (활성 슬롯: %s 유지)"),
+		SlotA == EWeaponSlot::Primary ? TEXT("Primary") : TEXT("Secondary"),
+		SlotB == EWeaponSlot::Primary ? TEXT("Primary") : TEXT("Secondary"),
+		GetActiveSlot() == EWeaponSlot::Primary ? TEXT("Primary") : TEXT("Secondary"));
+
+	return true;
+}

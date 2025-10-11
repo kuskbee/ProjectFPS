@@ -4,21 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Components/EWeaponSlot.h"
 #include "UObject/WeakInterfacePtr.h"
 #include "WeaponSlotComponent.generated.h"
 
 class UWeaponItemData;
 class AFPSWeapon;
 class IFPSWeaponHolder;
-
-/** 무기 슬롯 타입 */
-UENUM(BlueprintType)
-enum class EWeaponSlot : uint8
-{
-	Primary = 0,
-	Secondary = 1,
-	Max = 2
-};
 
 /**
  * 무기 슬롯 관리 컴포넌트 (캐싱 방식)
@@ -93,6 +85,10 @@ public:
 	/** 숫자키로 슬롯 전환 (1=Primary, 2=Secondary) */
 	UFUNCTION(BlueprintCallable, Category = "Weapon Slots")
 	bool SwitchToSlotByNumber(int32 SlotNumber);
+
+	/** 두 슬롯 간 무기 교환 */
+	UFUNCTION(BlueprintCallable, Category = "Weapon Slots")
+	bool SwapWeaponSlots(EWeaponSlot SlotA, EWeaponSlot SlotB);
 
 	// ========================================
 	// 정보 조회 시스템

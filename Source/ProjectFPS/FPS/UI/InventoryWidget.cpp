@@ -10,11 +10,15 @@
 #include "Components/CanvasPanelSlot.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Styling/SlateBrush.h"
+#include "Framework/Application/SlateApplication.h"
 #include "../Components/InventoryComponent.h"
+#include "../Components/WeaponSlotComponent.h"
 #include "../Items/BaseItemData.h"
+#include "../Items/WeaponItemData.h"
 #include "../FPSPlayerCharacter.h"
 #include "ItemDragDropOperation.h"
 #include "InventoryItemWidget.h"
+#include "WeaponSlotItemWidget.h"
 
 UInventoryWidget::UInventoryWidget(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -57,14 +61,19 @@ void UInventoryWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 	// 드래그 중인 경우 하이라이트 업데이트
 	if (CurrentDragOperation)
 	{
-		FVector2D MousePosition = UWidgetLayoutLibrary::GetMousePositionOnViewport(GetWorld());
-		UpdateDragHighlight(MyGeometry, MousePosition);
+		// Slate의 FSlateApplication을 통해 절대 마우스 좌표 가져오기 (픽셀 단위)
+		if (FSlateApplication::IsInitialized())
+		{
+			FVector2D ScreenMousePosition = FSlateApplication::Get().GetCursorPos();
+			UpdateDragHighlight(ScreenMousePosition);
+		}
 	}
 }
 
-void UInventoryWidget::InitializeInventory(UInventoryComponent* InInventoryComponent)
+void UInventoryWidget::InitializeInventory(UInventoryComponent* InInventoryComponent, UWeaponSlotComponent* InWeaponSlotComponent)
 {
 	InventoryComponent = InInventoryComponent;
+	WeaponSlotComponent = InWeaponSlotComponent;
 
 	if (InventoryComponent)
 	{
@@ -77,6 +86,21 @@ void UInventoryWidget::InitializeInventory(UInventoryComponent* InInventoryCompo
 		// 인벤토리 내용 표시
 		RefreshInventory();
 	}
+
+	// 무기 슬롯 초기화
+	if (PrimaryWeaponSlot)
+	{
+		PrimaryWeaponSlot->SetWeaponSlot(EWeaponSlot::Primary);
+		PrimaryWeaponSlot->SetComponents(WeaponSlotComponent, InventoryComponent);
+	}
+	if (SecondaryWeaponSlot)
+	{
+		SecondaryWeaponSlot->SetWeaponSlot(EWeaponSlot::Secondary);
+		SecondaryWeaponSlot->SetComponents(WeaponSlotComponent, InventoryComponent);
+	}
+
+	// 무기 슬롯 새로고침
+	RefreshWeaponSlots();
 }
 
 // ========================================
@@ -226,9 +250,7 @@ bool UInventoryWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDrop
 	FVector2D MousePosition = InDragDropEvent.GetScreenSpacePosition();
 	bool bSuccess = TryPlaceItemAtMouse(InGeometry, MousePosition, DragOp);
 
-	// 하이라이트 숨기기
-	HideDragHighlight();
-	CurrentDragOperation = nullptr;
+	FinishDragDropEvent();
 
 	if (bSuccess)
 	{
@@ -292,15 +314,55 @@ void UInventoryWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDropEve
 // 드래그 시각 피드백
 // ========================================
 
-void UInventoryWidget::UpdateDragHighlight(const FGeometry& MyGeometry, const FVector2D& MousePosition)
+void UInventoryWidget::UpdateDragHighlight(const FVector2D& MousePosition)
 {
 	if (!CurrentDragOperation || !InventoryComponent)
 	{
 		return;
 	}
 
+	// 1. 먼저 무기 슬롯 위에 있는지 체크 (절대 좌표 기반 AABB)
+	if (PrimaryWeaponSlot)
+	{
+		const FGeometry& G = PrimaryWeaponSlot->GetCachedGeometry();
+
+		// 누적 레이아웃 변환이 반영된 '절대 좌표계'의 사각형
+		const FSlateRect Rect = G.GetRenderBoundingRect();
+
+		if (Rect.ContainsPoint(MousePosition))
+		{
+			//UE_LOG(LogTemp, Log, TEXT("UpdateDragHighlight: Primary 무기 슬롯 영역! Mouse(%f,%f) Rect(%f,%f,%f,%f"),
+			//	MousePosition.X, MousePosition.Y, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom);
+			UpdateWeaponSlotHighlight(MousePosition, PrimaryWeaponSlot);
+			return;
+		}
+	}
+
+	if (SecondaryWeaponSlot)
+	{
+		const FGeometry& G = SecondaryWeaponSlot->GetCachedGeometry();
+
+		// 누적 레이아웃 변환이 반영된 '절대 좌표계'의 사각형
+		const FSlateRect Rect = G.GetRenderBoundingRect();
+
+		if (Rect.ContainsPoint(MousePosition))
+		{
+			//UE_LOG(LogTemp, Log, TEXT("UpdateDragHighlight: Secondary 무기 슬롯 영역! Mouse(%f,%f) Rect(%f,%f,%f,%f"),
+			//	MousePosition.X, MousePosition.Y, Rect.Left, Rect.Top, Rect.Right, Rect.Bottom);
+			UpdateWeaponSlotHighlight(MousePosition, SecondaryWeaponSlot);
+			return;
+		}
+	}
+
+	// 2. 그리드 영역에서 하이라이트 표시
 	// 마우스 위치에서 그리드 좌표 계산
-	FIntPoint GridPos = GetGridPosFromMouse(MyGeometry, MousePosition);
+	FIntPoint GridPos = GetGridPosFromMouse(MousePosition);
+
+	if (GridPos.X < 0 || GridPos.Y < 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("UpdateDragHighlight: 마우스 좌표가 영역 밖!"));
+		return;
+	}
 
 	// 배치 가능 여부 체크
 	bool bCanPlace = InventoryComponent->CanPlaceItemAt(CurrentDragOperation->DraggedItem, GridPos.X, GridPos.Y);
@@ -318,18 +380,67 @@ void UInventoryWidget::UpdateDragHighlight(const FGeometry& MyGeometry, const FV
 		{
 			FIntPoint ItemSize = CurrentDragOperation->DraggedItem->GetGridSize();
 
+			UWidget* HoverCell = GridPanel->GetChildAt(GridPos.X + GridPos.Y * InventoryComponent->GetGridWidth());
+			if (!HoverCell)
+			{
+				UE_LOG(LogTemp, Log, TEXT("UpdateDragHighlight: GridPanel GetChildAt 실패! (%d, %d)"), GridPos.X, GridPos.Y);
+				return;
+			}
+			const FGeometry& G = HoverCell->GetCachedGeometry();
+			FVector2D HighlightSize = G.GetLocalSize();
+			FVector2D SlotScreenPosition = G.GetAbsolutePosition();
+
+			// InventoryWidget의 Geometry를 기준으로 로컬 좌표로 변환
+			FVector2D LocalPosition = GetCachedGeometry().AbsoluteToLocal(SlotScreenPosition);
+
 			// 실제 셀 크기와 실제 패딩으로 좌표 계산
-			float Width = (ActualSlotWidth * ItemSize.X) + (ActualSlotPaddingWidth * (ItemSize.X + 1));
-			float Height = (ActualSlotHeight * ItemSize.Y) + (ActualSlotPaddingHeight * (ItemSize.Y + 1));
-			float PosX = (ActualSlotWidth + ActualSlotPaddingWidth) * GridPos.X + ActualSlotPaddingWidth;
-			float PosY = (ActualSlotHeight + ActualSlotPaddingHeight) * GridPos.Y + ActualSlotPaddingHeight;
+			float Width = (HighlightSize.X * ItemSize.X) + (ActualSlotPaddingWidth * (ItemSize.X + 1));
+			float Height = (HighlightSize.Y * ItemSize.Y) + (ActualSlotPaddingHeight * (ItemSize.Y + 1));
+			float PosX = LocalPosition.X;
+			float PosY = LocalPosition.Y;
 
 			HighlightSlot->SetPosition(FVector2D(PosX, PosY));
 			HighlightSlot->SetSize(FVector2D(Width, Height));
+			HighlightSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));  // 절대 좌표
 		}
 
 		DragHighlightImage->SetVisibility(ESlateVisibility::HitTestInvisible);
 	}
+}
+
+void UInventoryWidget::UpdateWeaponSlotHighlight(const FVector2D& MousePosition, UWeaponSlotItemWidget* SlotWidget)
+{
+	if (!DragHighlightImage || !SlotWidget || !CurrentDragOperation || !WeaponSlotComponent)
+	{
+		return;
+	}
+
+	// WeaponItemData만 무기 슬롯에 장착 가능
+	UWeaponItemData* WeaponData = Cast<UWeaponItemData>(CurrentDragOperation->DraggedItem);
+	EWeaponSlot HoverSlot = SlotWidget->GetWeaponSlot();
+	bool bCanEquip = (WeaponData != nullptr) && WeaponSlotComponent->IsSlotEmpty(HoverSlot);
+
+	// 초록(장착 가능) / 빨강(장착 불가능) 색상 변경
+	FLinearColor HighlightColor = bCanEquip ? FLinearColor::Green : FLinearColor::Red;
+	HighlightColor.A = 0.5f;  // 반투명
+	DragHighlightImage->SetColorAndOpacity(HighlightColor);
+
+	// 무기 슬롯의 Geometry를 기반으로 하이라이트 위치 및 크기 설정
+	const FGeometry& SlotGeometry = SlotWidget->GetCachedGeometry();
+	FVector2D HighlightSize = SlotGeometry.GetLocalSize();
+	FVector2D SlotScreenPosition = SlotGeometry.GetAbsolutePosition();
+
+	// InventoryWidget의 Geometry를 기준으로 로컬 좌표로 변환
+	FVector2D LocalPosition = GetCachedGeometry().AbsoluteToLocal(SlotScreenPosition);
+
+	if (UCanvasPanelSlot* HighlightSlot = Cast<UCanvasPanelSlot>(DragHighlightImage->Slot))
+	{
+		HighlightSlot->SetPosition(LocalPosition);
+		HighlightSlot->SetSize(HighlightSize);
+		HighlightSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));  // 절대 좌표
+	}
+
+	DragHighlightImage->SetVisibility(ESlateVisibility::HitTestInvisible);
 }
 
 void UInventoryWidget::HideDragHighlight()
@@ -340,10 +451,20 @@ void UInventoryWidget::HideDragHighlight()
 	}
 }
 
-FIntPoint UInventoryWidget::GetGridPosFromMouse(const FGeometry& MyGeometry, const FVector2D& MousePosition) const
+FIntPoint UInventoryWidget::GetGridPosFromMouse(const FVector2D& MousePosition) const
 {
-	// 스크린 좌표 → 로컬 좌표 변환
-	FVector2D LocalPosition = MyGeometry.AbsoluteToLocal(MousePosition);
+	UE_LOG(LogTemp, Log, TEXT("GetGridPosFromMouse Mouse(%f, %f)"), MousePosition.X, MousePosition.Y);
+
+	if (!GridPanel || !InventoryComponent) return FIntPoint(-1,-1);
+
+	// 그리드 패널의 Geometry 확보
+	const FGeometry& GridGeo = GridPanel->GetCachedGeometry();
+
+	// 마우스가 그리드 영역 위에 있는지
+	if (!GridGeo.IsUnderLocation(MousePosition)) return FIntPoint(-1, -1);
+
+	// 절대 → 로컬
+	FVector2D LocalPosition = GridGeo.AbsoluteToLocal(MousePosition);
 
 	// 그리드 좌표 계산 (ActualSlotWidth/Height + ActualSlotPadding 간격 고려)
 	int32 GridX = FMath::FloorToInt(LocalPosition.X / (ActualSlotWidth + ActualSlotPaddingWidth));
@@ -356,6 +477,7 @@ FIntPoint UInventoryWidget::GetGridPosFromMouse(const FGeometry& MyGeometry, con
 		GridY = FMath::Clamp(GridY, 0, InventoryComponent->GetGridHeight() - 1);
 	}
 
+	UE_LOG(LogTemp, Log, TEXT("GetGridPosFromMouse Grid(%d, %d)"), GridX, GridY);
 	return FIntPoint(GridX, GridY);
 }
 
@@ -367,21 +489,44 @@ bool UInventoryWidget::TryPlaceItemAtMouse(const FGeometry& MyGeometry, const FV
 	}
 
 	// 마우스 위치에서 그리드 좌표 계산
-	FIntPoint GridPos = GetGridPosFromMouse(MyGeometry, MousePosition);
+	FIntPoint GridPos = GetGridPosFromMouse(MousePosition);
 
-	// 원래 위치에서 제거 (Grid에서 드래그한 경우)
+	// 배치 가능 여부 먼저 체크
+	bool bCanPlace = false;
+
 	if (DragOp->DragSource == EItemDragSource::Grid)
 	{
+		// Grid → Grid: 원래 위치 제외하고 배치 가능한지 체크
 		InventoryComponent->RemoveItemAt(DragOp->OriginGridX, DragOp->OriginGridY);
+		bCanPlace = InventoryComponent->CanPlaceItemAt(DragOp->DraggedItem, GridPos.X, GridPos.Y);
+	}
+	else if (DragOp->DragSource == EItemDragSource::WeaponSlot)
+	{
+		// WeaponSlot → Grid: 그냥 배치 가능한지만 체크
+		bCanPlace = InventoryComponent->CanPlaceItemAt(DragOp->DraggedItem, GridPos.X, GridPos.Y);
 	}
 
-	// 새 위치에 배치 시도
+	// 배치 불가능하면 원래 위치 복구 (Grid의 경우만)
+	if (!bCanPlace)
+	{
+		if (DragOp->DragSource == EItemDragSource::Grid)
+		{
+			InventoryComponent->PlaceItemAt(DragOp->DraggedItem, DragOp->OriginGridX, DragOp->OriginGridY);
+		}
+		// WeaponSlot의 경우 아무것도 안함 (장착 상태 유지)
+		return false;
+	}
+
+	// 배치 가능하면 실제 배치
 	bool bSuccess = InventoryComponent->PlaceItemAt(DragOp->DraggedItem, GridPos.X, GridPos.Y);
 
-	// 실패 시 원래 위치에 복구
-	if (!bSuccess && DragOp->DragSource == EItemDragSource::Grid)
+	// 성공 시 원래 위치 처리
+	if (bSuccess && DragOp->DragSource == EItemDragSource::WeaponSlot && WeaponSlotComponent)
 	{
-		InventoryComponent->PlaceItemAt(DragOp->DraggedItem, DragOp->OriginGridX, DragOp->OriginGridY);
+		// 무기 슬롯에서 해제
+		WeaponSlotComponent->UnequipWeaponFromSlot(DragOp->OriginWeaponSlot);
+		RefreshWeaponSlots();
+		UE_LOG(LogTemp, Log, TEXT("무기 슬롯 → 그리드 배치 성공"));
 	}
 
 	return bSuccess;
@@ -552,3 +697,56 @@ void UInventoryWidget::OnCloseButtonClicked()
 		PC->SetInputMode(FInputModeGameOnly());
 	}
 }
+
+// ========================================
+// 무기 슬롯 UI 갱신
+// ========================================
+
+void UInventoryWidget::RefreshWeaponSlots()
+{
+	UE_LOG(LogTemp, Log, TEXT("RefreshWeaponSlots:"));
+	if (!WeaponSlotComponent)
+	{
+		return;
+	}
+
+	// Primary 슬롯 갱신
+	if (PrimaryWeaponSlot)
+	{
+		UWeaponItemData* PrimaryWeapon = WeaponSlotComponent->GetWeaponInSlot(EWeaponSlot::Primary);
+		if (PrimaryWeapon)
+		{
+			UE_LOG(LogTemp, Log, TEXT("RefreshWeaponSlots: PrimaryWeaponSlot SetWeaponIcon"));
+			PrimaryWeaponSlot->SetWeaponIcon(PrimaryWeapon);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Log, TEXT("RefreshWeaponSlots: PrimaryWeaponSlot ClearWeaponIcon"));
+			PrimaryWeaponSlot->ClearWeaponIcon();
+		}
+	}
+
+	// Secondary 슬롯 갱신
+	if (SecondaryWeaponSlot)
+	{
+		UWeaponItemData* SecondaryWeapon = WeaponSlotComponent->GetWeaponInSlot(EWeaponSlot::Secondary);
+		if (SecondaryWeapon)
+		{
+			UE_LOG(LogTemp, Log, TEXT("RefreshWeaponSlots: SecondaryWeapon SetWeaponIcon"));
+			SecondaryWeaponSlot->SetWeaponIcon(SecondaryWeapon);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Log, TEXT("RefreshWeaponSlots: SecondaryWeapon ClearWeaponIcon"));
+			SecondaryWeaponSlot->ClearWeaponIcon();
+		}
+	}
+}
+
+void UInventoryWidget::FinishDragDropEvent()
+{
+	// 하이라이트 숨기기
+	HideDragHighlight();
+	CurrentDragOperation = nullptr;
+}
+

@@ -882,8 +882,8 @@ void AFPSPlayerCharacter::ToggleInventory(const FInputActionValue& Value)
 	InventoryWidget = CreateWidget<UInventoryWidget>(PC, InventoryWidgetClass);
 	if (InventoryWidget)
 	{
-		// InventoryComponent 연동
-		InventoryWidget->InitializeInventory(InventoryComponent);
+		// InventoryComponent & WeaponSlotComponent 연동
+		InventoryWidget->InitializeInventory(InventoryComponent, WeaponSlotComponent);
 
 		// 화면에 추가
 		InventoryWidget->AddToViewport();

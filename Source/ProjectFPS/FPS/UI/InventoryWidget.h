@@ -10,9 +10,11 @@ class UCanvasPanel;
 class UUniformGridPanel;
 class UImage;
 class UInventoryComponent;
+class UWeaponSlotComponent;
 class UBaseItemData;
 class UItemDragDropOperation;
 class UInventoryItemWidget;
+class UWeaponSlotItemWidget;
 class UButton;
 
 /**
@@ -29,7 +31,13 @@ public:
 	UInventoryWidget(const FObjectInitializer& ObjectInitializer);
 
 	// 초기화
-	void InitializeInventory(UInventoryComponent* InInventoryComponent);
+	void InitializeInventory(UInventoryComponent* InInventoryComponent, UWeaponSlotComponent* InWeaponSlotComponent);
+
+	// 무기 슬롯 새로고침
+	void RefreshWeaponSlots();
+
+	// 드래그 앤 드롭 이벤트 처리
+	void FinishDragDropEvent();
 
 protected:
 	virtual void NativeConstruct() override;
@@ -42,9 +50,12 @@ protected:
 	virtual void NativeOnDragCancelled(const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 
 private:
-	// 인벤토리 컴포넌트 참조
+	// 컴포넌트 참조
 	UPROPERTY()
 	TObjectPtr<UInventoryComponent> InventoryComponent;
+
+	UPROPERTY()
+	TObjectPtr<UWeaponSlotComponent> WeaponSlotComponent;
 
 	// UI 위젯들 (Blueprint에서 바인딩)
 	UPROPERTY(meta = (BindWidget))
@@ -55,6 +66,13 @@ private:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> CloseButton;
+
+	// 무기 슬롯 위젯들 (Blueprint에서 바인딩)
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UWeaponSlotItemWidget> PrimaryWeaponSlot;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UWeaponSlotItemWidget> SecondaryWeaponSlot;
 
 	// 그리드 설정
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
@@ -74,8 +92,8 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
 	TSubclassOf<UInventoryItemWidget> ItemWidgetClass;
 
-	// 드래그 하이라이트
-	UPROPERTY()
+	// 드래그 하이라이트 (Blueprint에서 바인딩)
+	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> DragHighlightImage;  // 초록/빨강 테두리
 
 	UPROPERTY()
@@ -97,9 +115,13 @@ private:
 	void ClearItemCanvas();
 
 	// 드래그 시각 피드백
-	void UpdateDragHighlight(const FGeometry& MyGeometry, const FVector2D& MousePosition);
+	void UpdateDragHighlight(const FVector2D& MousePosition);
+	FIntPoint GetGridPosFromMouse(const FVector2D& MousePosition) const;
+
+	// 무기 슬롯 위에 하이라이트 그리기
+	void UpdateWeaponSlotHighlight(const FVector2D& MousePosition, UWeaponSlotItemWidget* SlotWidget);
+	// 드래그 하이라이트 제어
 	void HideDragHighlight();
-	FIntPoint GetGridPosFromMouse(const FGeometry& MyGeometry, const FVector2D& MousePosition) const;
 
 	// 아이템 배치 시도
 	bool TryPlaceItemAtMouse(const FGeometry& MyGeometry, const FVector2D& MousePosition, UItemDragDropOperation* DragOp);

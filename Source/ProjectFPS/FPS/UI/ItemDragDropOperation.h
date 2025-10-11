@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/DragDropOperation.h"
+#include "Components/EWeaponSlot.h"
 #include "ItemDragDropOperation.generated.h"
 
 class UBaseItemData;
@@ -41,4 +42,8 @@ public:
 	/** 드래그 시작 위치 타입 */
 	UPROPERTY(BlueprintReadWrite, Category = "Drag Drop")
 	EItemDragSource DragSource = EItemDragSource::Grid;
+
+	/** 원래 무기 슬롯 (WeaponSlot에서 드래그한 경우) */
+	UPROPERTY(BlueprintReadWrite, Category = "Drag Drop")
+	EWeaponSlot OriginWeaponSlot = EWeaponSlot::None;
 };

@@ -6,7 +6,9 @@
 #include "FPS/Items/WeaponItemData.h"
 #include "FPS/Components/PickupTriggerComponent.h"
 #include "FPS/FPSCharacter.h"
+#include "FPS/FPSPlayerCharacter.h"
 #include "FPS/Components/WeaponSlotComponent.h"
+#include "FPS/Components/InventoryComponent.h"
 #include "FPS/PlayerAttributeSet.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
@@ -491,7 +493,7 @@ bool AFPSWeapon::CanBePickedUp(AFPSCharacter* Character)
 
 bool AFPSWeapon::OnPickedUp(AFPSCharacter* Character)
 {
-	if (!Character || !CanBePickedUp(Character))
+	if (!Character)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: 장착할 수 없는 상태입니다!"));
 		return false;
@@ -506,32 +508,70 @@ bool AFPSWeapon::OnPickedUp(AFPSCharacter* Character)
 	}
 
 	// 빈 슬롯 찾기 (Primary 우선, 없으면 Secondary)
-	EWeaponSlot TargetSlot = EWeaponSlot::Primary;
-	if (!WeaponSlotComp->IsSlotEmpty(EWeaponSlot::Primary))
+	EWeaponSlot TargetSlot = EWeaponSlot::None;
+	bool bHasEmptySlot = false;
+
+	if (WeaponSlotComp->IsSlotEmpty(EWeaponSlot::Primary))
 	{
-		if (!WeaponSlotComp->IsSlotEmpty(EWeaponSlot::Secondary))
-		{
-			//:TODO: 슬롯이 꽉찬 경우 인벤토리 이동 (추후 인벤토리 작업 후 처리)
-			UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: 모든 슬롯이 차있습니다"));
-			return false;
-		}
+		TargetSlot = EWeaponSlot::Primary;
+		bHasEmptySlot = true;
+	}
+	else if (WeaponSlotComp->IsSlotEmpty(EWeaponSlot::Secondary))
+	{
 		TargetSlot = EWeaponSlot::Secondary;
+		bHasEmptySlot = true;
 	}
 
-	// 무기 장착 시도
-	bool bSuccess = WeaponSlotComp->EquipExistingWeaponToSlot(TargetSlot, this);
-	if (bSuccess)
+	// 빈 슬롯이 있는 경우 무기 장착
+	if (bHasEmptySlot)
 	{
-		UE_LOG(LogTemp, Log, TEXT("무기 픽업 성공: %s를 %s 슬롯에 장착"),
-			*GetPickupDisplayName(),
-			TargetSlot == EWeaponSlot::Primary ? TEXT("Primary") : TEXT("Secondary"));
+		bool bSuccess = WeaponSlotComp->EquipExistingWeaponToSlot(TargetSlot, this);
+		if (bSuccess)
+		{
+			UE_LOG(LogTemp, Log, TEXT("무기 픽업 성공: %s를 %s 슬롯에 장착"),
+				*GetPickupDisplayName(),
+				TargetSlot == EWeaponSlot::Primary ? TEXT("Primary") : TEXT("Secondary"));
+			return true;
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("무기 픽업 실패: %s"), *GetPickupDisplayName());
+			return false;
+		}
+	}
+
+	// 슬롯이 꽉 찬 경우 인벤토리로 이동 (플레이어만 인벤토리 있음)
+	AFPSPlayerCharacter* PlayerCharacter = Cast<AFPSPlayerCharacter>(Character);
+	if (!PlayerCharacter)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: 플레이어가 아니므로 인벤토리에 넣을 수 없습니다"));
+		return false;
+	}
+
+	UInventoryComponent* InventoryComp = PlayerCharacter->GetInventoryComponent();
+	if (!InventoryComp)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("OnPickedUp: InventoryComponent를 찾을 수 없습니다"));
+		return false;
+	}
+
+	// 인벤토리에 자동 배치
+	int32 OutX, OutY;
+	bool bPlacedInInventory = InventoryComp->AutoPlaceItem(WeaponItemData, OutX, OutY);
+	if (bPlacedInInventory)
+	{
+		UE_LOG(LogTemp, Log, TEXT("무기 픽업 성공: %s를 인벤토리 (%d, %d)에 배치"), *GetPickupDisplayName(), OutX, OutY);
+
+		// 픽업 완료 처리 (Actor 파괴)
+		SetDropped(false);
+		Destroy();
+		return true;
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("무기 픽업 실패: %s"), *GetPickupDisplayName());
+		UE_LOG(LogTemp, Warning, TEXT("무기 픽업 실패: 인벤토리에 공간이 없습니다"));
+		return false;
 	}
-
-	return bSuccess;
 }
 
 FString AFPSWeapon::GetPickupDisplayName() const
