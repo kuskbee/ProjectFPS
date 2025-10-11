@@ -3,6 +3,8 @@
 #include "PickupTriggerComponent.h"
 #include "FPS/Interfaces/Pickupable.h"
 #include "FPS/FPSCharacter.h"
+#include "FPS/FPSPlayerCharacter.h"
+#include "FPS/UI/ToastManagerWidget.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
@@ -42,24 +44,20 @@ void UPickupTriggerComponent::BeginPlay()
 void UPickupTriggerComponent::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// FPSCharacter이고 PlayerController가 있는지 확인 (플레이어만)
-	if (AFPSCharacter* Character = Cast<AFPSCharacter>(OtherActor))
+	// FPSPlayerCharacter만 처리
+	if (AFPSPlayerCharacter* PlayerCharacter = Cast<AFPSPlayerCharacter>(OtherActor))
 	{
-		// AI 캐릭터는 제외하고 플레이어만
-		if (Cast<APlayerController>(Character->GetController()))
+		// 아이템이 픽업 가능한 상태인지 확인
+		IPickupable* PickupableOwner = GetPickupableOwner();
+		if (PickupableOwner && PickupableOwner->IsDropped())
 		{
-			// 아이템이 픽업 가능한 상태인지 확인
-			IPickupable* PickupableOwner = GetPickupableOwner();
-			if (PickupableOwner && PickupableOwner->IsDropped())
+			// ToastManager를 통해 픽업 메시지 표시
+			if (UToastManagerWidget* ToastManager = PlayerCharacter->ToastManagerWidget)
 			{
-				// TODO: UI 표시 ("E키로 픽업" 메시지)
-				if (GEngine)
-				{
-					GEngine->AddOnScreenDebugMessage(-1, 0.1f, FColor::Yellow,
-						FString::Printf(TEXT("[E] %s"), *PickupableOwner->GetPickupDisplayName()));
-				}
-				UE_LOG(LogTemp, Log, TEXT("픽업 UI 표시: %s"), *PickupableOwner->GetPickupDisplayName());
+				FString Message = FString::Printf(TEXT("[E] %s"), *PickupableOwner->GetPickupDisplayName());
+				ToastManager->ShowToast(Message, 0.0f); // 무한 표시 (Overlap 중)
 			}
+			UE_LOG(LogTemp, Log, TEXT("픽업 UI 표시: %s"), *PickupableOwner->GetPickupDisplayName());
 		}
 	}
 }
@@ -67,15 +65,15 @@ void UPickupTriggerComponent::OnSphereBeginOverlap(UPrimitiveComponent* Overlapp
 void UPickupTriggerComponent::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	// FPSCharacter이고 PlayerController가 있는지 확인 (플레이어만)
-	if (AFPSCharacter* Character = Cast<AFPSCharacter>(OtherActor))
+	// FPSPlayerCharacter만 처리
+	if (AFPSPlayerCharacter* PlayerCharacter = Cast<AFPSPlayerCharacter>(OtherActor))
 	{
-		// AI 캐릭터는 제외하고 플레이어만
-		if (Cast<APlayerController>(Character->GetController()))
+		// ToastManager를 통해 픽업 메시지 숨김
+		if (UToastManagerWidget* ToastManager = PlayerCharacter->ToastManagerWidget)
 		{
-			// TODO: UI 숨김 처리
-			UE_LOG(LogTemp, Log, TEXT("픽업 UI 숨김"));
+			ToastManager->HideToast();
 		}
+		UE_LOG(LogTemp, Log, TEXT("픽업 UI 숨김"));
 	}
 }
 

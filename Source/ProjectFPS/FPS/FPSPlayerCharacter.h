@@ -12,6 +12,7 @@ class USkillComponent;
 class USkillTreeWidget;
 class UInventoryComponent;
 class UInventoryWidget;
+class UToastManagerWidget;
 
 /**
  * 플레이어 전용 캐릭터 클래스
@@ -79,6 +80,15 @@ protected:
 	/** 현재 활성화된 InventoryWidget 인스턴스 */
 	UPROPERTY(BlueprintReadOnly, Category = "UI")
 	TObjectPtr<UInventoryWidget> InventoryWidget;
+
+public:
+	/** ToastManagerWidget 클래스 (Blueprint에서 설정) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UToastManagerWidget> ToastManagerWidgetClass;
+
+	/** 현재 활성화된 ToastManagerWidget 인스턴스 */
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UToastManagerWidget> ToastManagerWidget;
 
 public:
 	// 플레이어 입력 액션들

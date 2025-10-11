@@ -6,6 +6,7 @@
 #include "FPS/UI/PlayerHUD.h"
 #include "FPS/UI/SkillTreeWidget.h"
 #include "FPS/UI/InventoryWidget.h"
+#include "FPS/UI/ToastManagerWidget.h"
 #include "FPS/Components/WeaponSlotComponent.h"
 #include "FPS/Components/SkillComponent.h"
 #include "FPS/Components/InventoryComponent.h"
@@ -86,6 +87,17 @@ void AFPSPlayerCharacter::BeginPlay()
 			else
 			{
 				UE_LOG(LogTemp, Error, TEXT("PlayerHUD 생성 실패"));
+			}
+		}
+
+		// ToastManager 생성
+		if (ToastManagerWidgetClass)
+		{
+			ToastManagerWidget = CreateWidget<UToastManagerWidget>(PC, ToastManagerWidgetClass);
+			if (ToastManagerWidget)
+			{
+				ToastManagerWidget->AddToViewport(10); // 높은 ZOrder로 최상단 표시
+				UE_LOG(LogTemp, Log, TEXT("ToastManager 위젯 생성 완료"));
 			}
 		}
 	}

@@ -576,8 +576,7 @@ bool AFPSWeapon::OnPickedUp(AFPSCharacter* Character)
 
 FString AFPSWeapon::GetPickupDisplayName() const
 {
-	// TODO: WeaponItemData에서 이름 가져오기
-	return FString::Printf(TEXT("무기 (%s)"), *GetClass()->GetName());
+	return FString::Printf(TEXT("무기 (%s)"), WeaponItemData? *WeaponItemData->GetItemName() : *GetClass()->GetName());
 }
 
 bool AFPSWeapon::IsDropped() const
