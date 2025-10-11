@@ -27,8 +27,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Toast")
 	void HideToast();
 
-	// 메시지 제거 완료 델리게이트
-	DECLARE_DELEGATE(FOnToastFinished);
+	// 메시지 제거 완료 델리게이트 (자기 자신의 포인터 전달)
+	DECLARE_DELEGATE_OneParam(FOnToastFinished, UToastMessageWidget*);
 	FOnToastFinished OnToastFinished;
 
 protected:

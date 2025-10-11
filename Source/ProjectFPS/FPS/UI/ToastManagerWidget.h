@@ -43,6 +43,6 @@ private:
 	UPROPERTY()
 	TObjectPtr<UToastMessageWidget> CurrentToastWidget;
 
-	// 토스트 완료 시 호출
-	void OnToastFinished();
+	// 토스트 완료 시 호출 (완료된 위젯 포인터 전달받음)
+	void OnToastFinished(UToastMessageWidget* FinishedWidget);
 };

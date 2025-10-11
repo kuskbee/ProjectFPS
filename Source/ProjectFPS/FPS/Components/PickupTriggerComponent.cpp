@@ -15,7 +15,7 @@ UPickupTriggerComponent::UPickupTriggerComponent(const FObjectInitializer& Objec
 	PrimaryComponentTick.bCanEverTick = false;
 
 	// 기본 설정
-	InitSphereRadius(150.0f);
+	InitSphereRadius(100.0f);
 	SetCollisionProfileName(TEXT("Trigger"));
 	SetGenerateOverlapEvents(true);
 	

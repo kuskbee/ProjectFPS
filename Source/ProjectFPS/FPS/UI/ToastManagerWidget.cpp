@@ -11,38 +11,46 @@ void UToastManagerWidget::NativeConstruct()
 
 void UToastManagerWidget::ShowToast(const FString& Message, float DisplayDuration)
 {
-	// 이미 토스트가 표시 중이면 기존 위젯 제거
-	if (CurrentToastWidget && ToastContainer)
+	// 이미 토스트가 표시 중이면 기존 위젯을 페이드아웃 시작
+	if (CurrentToastWidget)
 	{
-		ToastContainer->RemoveChild(CurrentToastWidget);
-		CurrentToastWidget = nullptr;
+		CurrentToastWidget->HideToast();
+		// 제거는 OnToastFinished에서 자동 처리됨
 	}
 
 	// 새 토스트 위젯 생성
 	if (ToastMessageWidgetClass && ToastContainer)
 	{
-		CurrentToastWidget = CreateWidget<UToastMessageWidget>(this, ToastMessageWidgetClass);
-		if (CurrentToastWidget)
+		UToastMessageWidget* NewToast = CreateWidget<UToastMessageWidget>(this, ToastMessageWidgetClass);
+		if (NewToast)
 		{
-			// 컨테이너에 추가
-			ToastContainer->AddChild(CurrentToastWidget);
+			// 컨테이너에 추가 (기존 토스트 아래에 추가됨)
+			ToastContainer->AddChild(NewToast);
 
 			// 완료 델리게이트 바인딩
-			CurrentToastWidget->OnToastFinished.BindUObject(this, &UToastManagerWidget::OnToastFinished);
+			NewToast->OnToastFinished.BindUObject(this, &UToastManagerWidget::OnToastFinished);
 
 			// 메시지 표시
-			CurrentToastWidget->ShowMessage(Message, DisplayDuration);
+			NewToast->ShowMessage(Message, DisplayDuration);
+
+			// 현재 토스트 업데이트
+			CurrentToastWidget = NewToast;
 		}
 	}
 }
 
-void UToastManagerWidget::OnToastFinished()
+void UToastManagerWidget::OnToastFinished(UToastMessageWidget* FinishedWidget)
 {
-	// 토스트 위젯 제거
-	if (CurrentToastWidget && ToastContainer)
+	// 완료된 위젯만 제거 (CurrentToastWidget이 아닐 수도 있음!)
+	if (FinishedWidget && ToastContainer)
 	{
-		ToastContainer->RemoveChild(CurrentToastWidget);
-		CurrentToastWidget = nullptr;
+		ToastContainer->RemoveChild(FinishedWidget);
+
+		// 완료된 위젯이 현재 위젯이라면 초기화
+		if (CurrentToastWidget == FinishedWidget)
+		{
+			CurrentToastWidget = nullptr;
+		}
 	}
 }
 

@@ -72,10 +72,10 @@ void UToastMessageWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaT
 				CurrentState = EToastState::Finished;
 				StateTimer = 0.0f;
 
-				// 델리게이트 호출 (ToastManager가 위젯 제거)
+				// 델리게이트 호출 (자기 자신의 포인터 전달)
 				if (OnToastFinished.IsBound())
 				{
-					OnToastFinished.Execute();
+					OnToastFinished.Execute(this);
 				}
 			}
 			break;
