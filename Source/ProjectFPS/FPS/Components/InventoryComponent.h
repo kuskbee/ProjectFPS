@@ -21,6 +21,10 @@ struct FInventorySlot
 	UPROPERTY()
 	TObjectPtr<UBaseItemData> ItemData = nullptr;
 
+	/** 현재 스택 개수 (스택 가능한 아이템만 사용) */
+	UPROPERTY()
+	int32 CurrentStackSize = 1;
+
 	/** 이 슬롯이 아이템으로 점유되어 있는지 여부 */
 	UPROPERTY()
 	bool bIsOccupied = false;
@@ -36,6 +40,7 @@ struct FInventorySlot
 	// 기본 생성자
 	FInventorySlot()
 		: ItemData(nullptr)
+		, CurrentStackSize(1)
 		, bIsOccupied(false)
 		, bIsOrigin(false)
 		, OriginPos(-1, -1)
@@ -102,6 +107,16 @@ public:
 	bool PlaceItemAt(UBaseItemData* Item, int32 GridX, int32 GridY);
 
 	/**
+	 * 특정 위치에 아이템 배치 (스택 개수 지정)
+	 * @param Item 배치할 아이템
+	 * @param GridX 그리드 X 좌표
+	 * @param GridY 그리드 Y 좌표
+	 * @param StackCount 스택 개수
+	 * @return 배치 성공하면 true
+	 */
+	bool PlaceItemAt(UBaseItemData* Item, int32 GridX, int32 GridY, int32 StackCount);
+
+	/**
 	 * 특정 위치의 아이템 제거
 	 * @param GridX 그리드 X 좌표
 	 * @param GridY 그리드 Y 좌표
@@ -111,14 +126,25 @@ public:
 	bool RemoveItemAt(int32 GridX, int32 GridY);
 
 	/**
+	 * 특정 위치의 스택 감소 (소모품 사용 등)
+	 * @param GridX 그리드 X 좌표
+	 * @param GridY 그리드 Y 좌표
+	 * @param Amount 감소할 개수 (기본값 1)
+	 * @return 감소 성공하면 true
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	bool DecreaseStackAt(int32 GridX, int32 GridY, int32 Amount = 1);
+
+	/**
 	 * 아이템을 빈 공간에 자동 배치 (E키 픽업용)
 	 * @param Item 배치할 아이템
 	 * @param OutX 배치된 X 좌표 (출력)
 	 * @param OutY 배치된 Y 좌표 (출력)
+	 * @param StackCount 스택 개수 (기본값 1)
 	 * @return 배치 성공하면 true, 공간 부족하면 false
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
-	bool AutoPlaceItem(UBaseItemData* Item, int32& OutX, int32& OutY);
+	bool AutoPlaceItem(UBaseItemData* Item, int32& OutX, int32& OutY, int32 StackCount = 1);
 
 	/**
 	 * 아이템 이동 (기존 위치 제거 + 새 위치 배치)
@@ -176,6 +202,15 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	bool FindItemOrigin(int32 GridX, int32 GridY, int32& OutOriginX, int32& OutOriginY) const;
+
+	/**
+	 * 특정 위치 아이템의 스택 개수 가져오기
+	 * @param GridX X 좌표
+	 * @param GridY Y 좌표
+	 * @return 스택 개수 (아이템 없으면 0)
+	 */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 GetItemStackCount(int32 GridX, int32 GridY) const;
 
 	/**
 	 * 그리드 슬롯 배열 반환 (UI에서 읽기용)

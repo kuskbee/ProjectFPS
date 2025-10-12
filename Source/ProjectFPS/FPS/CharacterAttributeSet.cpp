@@ -3,6 +3,7 @@
 
 #include "FPS/CharacterAttributeSet.h"
 #include "FPS/GameplayEffect_StaminaRecover.h"
+#include "FPS/FPSCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
 
@@ -88,6 +89,9 @@ void UCharacterAttributeSet::PreAttributeChange(const FGameplayAttribute& Attrib
 {
 	Super::PreAttributeChange(Attribute, NewValue);
 
+	// PreAttributeChange에서 0 ~ Max 범위로 클램핑 (UI 튀는 현상 방지)
+	// PostGameplayEffectExecute에서는 추가 로직만 처리 (Shield 우선 소모, Death 등)
+
 	// Health 클램핑: 0 ~ MaxHealth
 	if (Attribute == GetHealthAttribute())
 	{
@@ -96,20 +100,12 @@ void UCharacterAttributeSet::PreAttributeChange(const FGameplayAttribute& Attrib
 	// Stamina 클램핑: 0 ~ MaxStamina
 	else if (Attribute == GetStaminaAttribute())
 	{
-		float OldValue = GetStamina();
-		UE_LOG(LogTemp, VeryVerbose, TEXT("PreAttributeChange 스태미나 클램핑 전: %.1f -> %.1f (+%.1f)"), OldValue, NewValue, NewValue - OldValue);
 		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxStamina());
-		UE_LOG(LogTemp, VeryVerbose, TEXT("PreAttributeChange 스태미나 클램핑 후: %.1f -> %.1f (+%.1f)"), OldValue, NewValue, NewValue - OldValue);
-
-		// 스태미나 변경 로그 (증가/감소 구분)
-		/*if (NewValue > OldValue)
-		{
-			UE_LOG(LogTemp, Log, TEXT("스태미나 회복: %.1f -> %.1f (+%.1f)"), OldValue, NewValue, NewValue - OldValue);
-		}
-		else if (NewValue < OldValue)
-		{
-			UE_LOG(LogTemp, Log, TEXT("스태미나 소모: %.1f -> %.1f (%.1f)"), OldValue, NewValue, NewValue - OldValue);
-		}*/
+	}
+	// Shield 클램핑: 0 ~ MaxShield
+	else if (Attribute == GetShieldAttribute())
+	{
+		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxShield());
 	}
 	// Mana 클램핑: 0 ~ MaxMana
 	else if (Attribute == GetManaAttribute())
@@ -124,12 +120,12 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 
 	UE_LOG(LogTemp, VeryVerbose, TEXT("PostGameplayEffectExecute 호출됨! Attribute: %s"), *Data.EvaluatedData.Attribute.GetName());
 
-	// Health 데미지 처리 - Shield 우선 소모
+	// Health 처리 - Shield 우선 소모 + 클램핑 + Death 체크
 	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		float DamageMagnitude = Data.EvaluatedData.Magnitude;
 
-		// 음수 Magnitude = 데미지 (Health 감소)
+		// 1. 음수 Magnitude = 데미지 (Health 감소) → Shield 처리
 		if (DamageMagnitude < 0.0f)
 		{
 			float AbsoluteDamage = -DamageMagnitude;
@@ -149,15 +145,39 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 					CurrentShield, GetShield(), ShieldDamage, ShieldDamage);
 			}
 		}
+
+		// 2. Health 클램핑 (0 ~ MaxHealth)
+		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
+		
+		if (GetHealth() <= 0.0f)
+		{
+			// 3. Death 처리 (Shield 계산 후 최종 체크!)
+			AActor* OwnerActor = GetOwningActor();
+			if (OwnerActor)
+			{
+				if (AFPSCharacter* Character = Cast<AFPSCharacter>(OwnerActor))
+				{
+					// bIsAlive 플래그 체크로 중복 Death 방지
+					if (Character->bIsAlive)
+					{
+						Character->OnPlayerDeath();
+						UE_LOG(LogTemp, Log, TEXT("PostGameplayEffectExecute: Health 0 도달 → Death 처리 (bIsAlive: true -> false)"));
+					}
+				}
+			}
+		}
 	}
 
-	// 스태미나가 MaxStamina에 도달하면 StaminaRecover Effect 제거
+	// Stamina 클램핑 (0 ~ MaxStamina)
 	if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{
-		float CurrentStamina = GetStamina();
 		float MaxStaminaValue = GetMaxStamina();
 
-		if (CurrentStamina >= MaxStaminaValue)
+		// 클램핑
+		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
+
+		// MaxStamina 도달 시 StaminaRecover Effect 제거
+		if (GetStamina() >= MaxStaminaValue)
 		{
 			UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
 			if (ASC)
@@ -180,5 +200,17 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 				}
 			}
 		}
+	}
+
+	// Mana 클램핑 (0 ~ MaxMana)
+	if (Data.EvaluatedData.Attribute == GetManaAttribute())
+	{
+		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+	}
+
+	// Shield 클램핑 (0 ~ MaxShield)
+	if (Data.EvaluatedData.Attribute == GetShieldAttribute())
+	{
+		SetShield(FMath::Clamp(GetShield(), 0.f, GetMaxShield()));
 	}
 }

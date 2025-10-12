@@ -7,6 +7,7 @@
 #include "InventoryItemWidget.generated.h"
 
 class UImage;
+class UTextBlock;
 class UBaseItemData;
 
 /**
@@ -22,8 +23,8 @@ class PROJECTFPS_API UInventoryItemWidget : public UUserWidget
 public:
 	UInventoryItemWidget(const FObjectInitializer& ObjectInitializer);
 
-	// 아이템 데이터 설정
-	void SetItemData(UBaseItemData* InItemData, int32 InGridX, int32 InGridY);
+	// 아이템 데이터 설정 (스택 개수 포함)
+	void SetItemData(UBaseItemData* InItemData, int32 InGridX, int32 InGridY, int32 InStackCount = 1);
 
 protected:
 	// 드래그 시작 감지
@@ -33,14 +34,24 @@ protected:
 	// 우클릭 드래그 취소
 	virtual FReply NativeOnMouseButtonUp(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
+	// 소모품 사용
+	void UseConsumableItem();
+
 private:
 	// 아이템 이미지 (Blueprint에서 바인딩)
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UImage> ItemImage;
 
+	// 스택 개수 텍스트 (Blueprint에서 바인딩, Optional)
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> StackCountText;
+
 	// 아이템 데이터
 	UPROPERTY()
 	TObjectPtr<UBaseItemData> ItemData;
+
+	// 스택 개수
+	int32 StackCount = 1;
 
 	// 그리드 좌표 (원래 위치 저장용)
 	int32 GridX = -1;

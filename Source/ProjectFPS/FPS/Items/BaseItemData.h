@@ -50,6 +50,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info", meta = (ClampMin = 1, ClampMax = 999))
 	int32 MaxStackSize = 1;
 
+	/** 현재 스택 개수 (런타임 정보) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Runtime")
+	int32 CurrentStackSize = 1;
+
 	/** 아이템 희귀도 (나중에 색상 등에 활용) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info")
 	int32 Rarity = 0;

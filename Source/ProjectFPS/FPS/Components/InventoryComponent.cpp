@@ -10,6 +10,11 @@ UInventoryComponent::UInventoryComponent()
 	// 기본 그리드 크기
 	GridWidth = 8;
 	GridHeight = 6;
+
+	// 생성자에서 그리드 슬롯 초기화 (BeginPlay 이전에 사용될 수 있음)
+	const int32 TotalSlots = GridWidth * GridHeight;
+	GridSlots.Empty(TotalSlots);
+	GridSlots.SetNum(TotalSlots);
 }
 
 void UInventoryComponent::BeginPlay()
@@ -71,6 +76,12 @@ bool UInventoryComponent::CanPlaceItemAt(UBaseItemData* Item, int32 GridX, int32
 
 bool UInventoryComponent::PlaceItemAt(UBaseItemData* Item, int32 GridX, int32 GridY)
 {
+	// 기본값 스택 개수 1로 호출
+	return PlaceItemAt(Item, GridX, GridY, 1);
+}
+
+bool UInventoryComponent::PlaceItemAt(UBaseItemData* Item, int32 GridX, int32 GridY, int32 StackCount)
+{
 	// 배치 가능 여부 체크
 	if (!CanPlaceItemAt(Item, GridX, GridY))
 	{
@@ -86,11 +97,14 @@ bool UInventoryComponent::PlaceItemAt(UBaseItemData* Item, int32 GridX, int32 Gr
 			GridSlots[SlotIndex].bIsOccupied = true;
 			GridSlots[SlotIndex].OriginPos = FIntPoint(GridX, GridY);  // 모든 칸에 Origin 좌표 저장
 
-			// 시작점(Origin)에만 ItemData 저장
+			// 시작점(Origin)에만 ItemData와 스택 정보 저장
 			if (X == 0 && Y == 0)
 			{
 				GridSlots[SlotIndex].ItemData = Item;
 				GridSlots[SlotIndex].bIsOrigin = true;
+				GridSlots[SlotIndex].CurrentStackSize = StackCount;
+				// BaseItemData의 CurrentStackSize도 동기화
+				Item->CurrentStackSize = StackCount;
 			}
 			else
 			{
@@ -99,8 +113,8 @@ bool UInventoryComponent::PlaceItemAt(UBaseItemData* Item, int32 GridX, int32 Gr
 		}
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("아이템 배치 성공: %s at (%d, %d), Size: %dx%d"),
-		*Item->GetItemName(), GridX, GridY, Item->GridWidth, Item->GridHeight);
+	UE_LOG(LogTemp, Log, TEXT("아이템 배치 성공: %s x%d at (%d, %d), Size: %dx%d"),
+		*Item->GetItemName(), StackCount, GridX, GridY, Item->GridWidth, Item->GridHeight);
 
 	// 인벤토리 변경 이벤트 발생
 	OnInventoryChanged.Broadcast();
@@ -155,7 +169,7 @@ bool UInventoryComponent::RemoveItemAt(int32 GridX, int32 GridY)
 	return true;
 }
 
-bool UInventoryComponent::AutoPlaceItem(UBaseItemData* Item, int32& OutX, int32& OutY)
+bool UInventoryComponent::AutoPlaceItem(UBaseItemData* Item, int32& OutX, int32& OutY, int32 StackCount)
 {
 	if (!Item)
 	{
@@ -163,18 +177,50 @@ bool UInventoryComponent::AutoPlaceItem(UBaseItemData* Item, int32& OutX, int32&
 		return false;
 	}
 
-	// 왼쪽 위부터 순차적으로 빈 공간 탐색
+	// 1. 스택 가능한 아이템인 경우 기존 스택 찾기
+	if (Item->IsStackable())
+	{
+		for (int32 Y = 0; Y < GridHeight; ++Y)
+		{
+			for (int32 X = 0; X < GridWidth; ++X)
+			{
+				int32 SlotIndex = GetSlotIndex(X, Y);
+				FInventorySlot& Slot = GridSlots[SlotIndex];
+
+				// Origin 슬롯이고 같은 종류의 아이템이며 스택 여유가 있는 경우
+				// DataAsset 경로로 비교 (예: "/Game/Items/Potions/DA_HealthPotion")
+				if (Slot.bIsOrigin && Slot.ItemData &&
+					Slot.ItemData->GetPathName() == Item->GetPathName() &&
+					Slot.CurrentStackSize + StackCount <= Item->MaxStackSize)
+				{
+					// 기존 스택에 추가
+					Slot.CurrentStackSize += StackCount;
+					OutX = X;
+					OutY = Y;
+					UE_LOG(LogTemp, Log, TEXT("AutoPlaceItem 스택 추가: %s x%d (총 %d개) at (%d, %d)"),
+						*Item->GetItemName(), StackCount, Slot.CurrentStackSize, X, Y);
+
+					// 인벤토리 변경 이벤트
+					OnInventoryChanged.Broadcast();
+					return true;
+				}
+			}
+		}
+	}
+
+	// 2. 기존 스택이 없거나 스택 불가능한 경우 새 슬롯에 배치
 	for (int32 Y = 0; Y < GridHeight; ++Y)
 	{
 		for (int32 X = 0; X < GridWidth; ++X)
 		{
 			if (CanPlaceItemAt(Item, X, Y))
 			{
-				if (PlaceItemAt(Item, X, Y))
+				if (PlaceItemAt(Item, X, Y, StackCount))
 				{
 					OutX = X;
 					OutY = Y;
-					UE_LOG(LogTemp, Log, TEXT("AutoPlaceItem 성공: %s at (%d, %d)"), *Item->GetItemName(), X, Y);
+					UE_LOG(LogTemp, Log, TEXT("AutoPlaceItem 새 슬롯: %s x%d at (%d, %d)"),
+						*Item->GetItemName(), StackCount, X, Y);
 					return true;
 				}
 			}
@@ -284,5 +330,64 @@ bool UInventoryComponent::FindItemOrigin(int32 GridX, int32 GridY, int32& OutOri
 
 	OutOriginX = OriginPos.X;
 	OutOriginY = OriginPos.Y;
+	return true;
+}
+
+int32 UInventoryComponent::GetItemStackCount(int32 GridX, int32 GridY) const
+{
+	// Origin 찾기
+	int32 OriginX, OriginY;
+	if (!FindItemOrigin(GridX, GridY, OriginX, OriginY))
+	{
+		return 0;  // 아이템이 없음
+	}
+
+	// Origin 슬롯의 스택 개수 반환
+	int32 OriginIndex = GetSlotIndex(OriginX, OriginY);
+	return GridSlots[OriginIndex].CurrentStackSize;
+}
+
+bool UInventoryComponent::DecreaseStackAt(int32 GridX, int32 GridY, int32 Amount)
+{
+	// Origin 찾기
+	int32 OriginX, OriginY;
+	if (!FindItemOrigin(GridX, GridY, OriginX, OriginY))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DecreaseStackAt: Origin을 찾을 수 없습니다. (%d, %d)"), GridX, GridY);
+		return false;
+	}
+
+	int32 OriginIndex = GetSlotIndex(OriginX, OriginY);
+	FInventorySlot& Slot = GridSlots[OriginIndex];
+
+	// 스택 개수 체크
+	if (Slot.CurrentStackSize < Amount)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DecreaseStackAt: 스택 개수 부족. 현재: %d, 요청: %d"),
+			Slot.CurrentStackSize, Amount);
+		return false;
+	}
+
+	// 스택 감소
+	Slot.CurrentStackSize -= Amount;
+
+	// BaseItemData의 CurrentStackSize도 동기화
+	if (Slot.ItemData)
+	{
+		Slot.ItemData->CurrentStackSize = Slot.CurrentStackSize;
+	}
+
+	// 스택이 0이 되면 아이템 제거
+	if (Slot.CurrentStackSize <= 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("DecreaseStackAt: 스택이 0이 되어 아이템 제거"));
+		return RemoveItemAt(OriginX, OriginY);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("DecreaseStackAt: %d개 감소, 남은 스택: %d"), Amount, Slot.CurrentStackSize);
+
+	// 인벤토리 변경 이벤트
+	OnInventoryChanged.Broadcast();
+
 	return true;
 }

@@ -52,10 +52,11 @@ protected:
 	void ServerNotifyPlayerDeath();
 	void ServerNotifyPlayerDeath_Implementation();
 
+public:
+
 	// 플레이어 사망 처리
 	virtual void OnPlayerDeath();
 
-public:
 	// 플레이어 리스폰 처리
 	UFUNCTION(BlueprintCallable, Category="Player")
 	virtual void OnPlayerRespawn();
@@ -100,9 +101,12 @@ protected:
 
 	FTimerHandle RespawnTimerHandle;
 
-	// 플레이어 생존 상태 (Blueprint에서 발사체 충돌 체크용)
+public:
+	// 플레이어/적 공통 생존 상태 플래그 (Blueprint에서도 접근 가능)
 	UPROPERTY(BlueprintReadOnly, Category="Player State")
 	bool bIsAlive = true;
+
+protected:
 
 	// 무기 소켓 이름들
 

@@ -150,7 +150,7 @@ void UInventoryWidget::RefreshInventory()
 
 void UInventoryWidget::AddItemImageToCanvas(UBaseItemData* ItemData, int32 GridX, int32 GridY)
 {
-	if (!ItemData || !ItemCanvas)
+	if (!ItemData || !ItemCanvas || !InventoryComponent)
 	{
 		return;
 	}
@@ -197,8 +197,9 @@ void UInventoryWidget::AddItemImageToCanvas(UBaseItemData* ItemData, int32 GridX
 		return;
 	}
 
-	// 아이템 데이터 설정
-	ItemWidget->SetItemData(ItemData, GridX, GridY);
+	// 아이템 데이터 설정 (스택 개수 포함)
+	int32 StackCount = InventoryComponent->GetItemStackCount(GridX, GridY);
+	ItemWidget->SetItemData(ItemData, GridX, GridY, StackCount);
 
 	// Canvas에 추가
 	UCanvasPanelSlot* CanvasSlot = ItemCanvas->AddChildToCanvas(ItemWidget);

@@ -236,16 +236,8 @@ void AFPSPlayerCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
 		);
 	}
 
-	// 체력이 0 이하가 되면 사망 처리 (단, 이미 죽은 상태가 아닐 때만)
-	if (Data.NewValue <= 0.0f && bIsAlive)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("체력 0 이하 - 사망 처리 시작 (bIsAlive: %s)"), bIsAlive ? TEXT("true") : TEXT("false"));
-		OnPlayerDeath();
-	}
-	else if (Data.NewValue <= 0.0f)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("체력 0 이하이지만 이미 죽은 상태 - 사망 처리 건너뜀"));
-	}
+	// ⚠️ Death 처리는 PostGameplayEffectExecute에서 처리됨 (Shield 계산 후)
+	// OnHealthChanged에서는 HUD 업데이트만 담당
 }
 
 void AFPSPlayerCharacter::OnStaminaChanged(const FOnAttributeChangeData& Data)

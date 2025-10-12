@@ -36,10 +36,6 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 protected:
-	// 적 상태
-	UPROPERTY(BlueprintReadOnly, Category = "State")
-	bool bIsDead = false;
-
 	// 사망 후 제거 시간
 	UPROPERTY(EditAnywhere, Category = "Death")
 	float DeathDestroyDelay = 5.0f;
@@ -61,9 +57,9 @@ public:
 	virtual void OnWeaponDeactivated(AFPSWeapon* Weapon) override;
 	virtual void OnSemiWeaponRefire() override;
 
-	// AI에서 사용할 함수들
+	// AI에서 사용할 함수들 (부모의 bIsAlive 사용)
 	UFUNCTION(BlueprintPure, Category = "AI")
-	bool IsDead() const { return bIsDead; }
+	bool IsDead() const { return !bIsAlive; }
 
 	/** AI 전용: 기본 무기 자동 지급 (부모 클래스 오버라이드) */
 	void GiveDefaultWeapon();

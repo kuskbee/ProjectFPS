@@ -53,30 +53,21 @@ void AFPSEnemyCharacter::BeginPlay()
 
 void AFPSEnemyCharacter::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
-	// 디버그 메시지
-	if (GEngine)
-	{
-		GEngine->AddOnScreenDebugMessage(
-			-1, 
-			3.f, 
-			FColor::Orange, 
-			FString::Printf(TEXT("적 체력: %f"), Data.NewValue)
-		);
-	}
+	// 적 캐릭터는 HUD가 없으므로 디버그 로그만 출력
+	UE_LOG(LogTemp, VeryVerbose, TEXT("적 체력 변경: %f -> %f"), Data.OldValue, Data.NewValue);
 
-	// 체력이 0 이하가 되면 사망 처리
-	if (Data.NewValue <= 0.0f && !bIsDead)
-	{
-		OnPlayerDeath();
-	}
+	// ⚠️ Death 체크는 CharacterAttributeSet::PostGameplayEffectExecute에서 처리됨
+	// 여기서는 추가 로직 없음
 }
 
 void AFPSEnemyCharacter::OnPlayerDeath()
 {
-	if (bIsDead) return;
-	
-	bIsDead = true;
-	
+	// 부모의 bIsAlive 체크
+	if (!bIsAlive) return;
+
+	// 부모의 bIsAlive = false 설정
+	bIsAlive = false;
+
 	UE_LOG(LogTemp, Warning, TEXT("적 캐릭터 사망!"));
 
 	// 움직임 정지

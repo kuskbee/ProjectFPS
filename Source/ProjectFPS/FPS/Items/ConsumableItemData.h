@@ -19,13 +19,13 @@ public:
 
 	// ==================== 소모품 속성 ====================
 
-	/** 회복량 (Health, Mana, Stamina 등) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
-	float RestoreAmount = 50.0f;
+	/** 사용 시 적용할 GameplayEffect (체력 회복, 버프 등) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Consumable")
+	TSubclassOf<class UGameplayEffect> ConsumableEffect;
 
-	/** 회복 타입 (Health, Mana, Stamina) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
-	FString RestoreType = TEXT("Health");
+	/** 효과 크기 (회복량, 버프 강도 등) - SetByCaller로 전달 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable", meta = (ClampMin = 0.0f))
+	float EffectMagnitude = 50.0f;
 
 	/** 즉시 소모 여부 (true: 픽업 시 즉시 사용, false: 인벤토리에 저장) */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Consumable")
