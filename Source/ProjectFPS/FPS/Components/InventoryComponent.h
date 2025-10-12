@@ -21,10 +21,6 @@ struct FInventorySlot
 	UPROPERTY()
 	TObjectPtr<UBaseItemData> ItemData = nullptr;
 
-	/** 현재 스택 개수 (스택 가능한 아이템만 사용) */
-	UPROPERTY()
-	int32 CurrentStackSize = 1;
-
 	/** 이 슬롯이 아이템으로 점유되어 있는지 여부 */
 	UPROPERTY()
 	bool bIsOccupied = false;
@@ -40,7 +36,6 @@ struct FInventorySlot
 	// 기본 생성자
 	FInventorySlot()
 		: ItemData(nullptr)
-		, CurrentStackSize(1)
 		, bIsOccupied(false)
 		, bIsOrigin(false)
 		, OriginPos(-1, -1)

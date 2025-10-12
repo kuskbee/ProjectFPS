@@ -12,6 +12,9 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "GameplayTags.h"
+#include "ToastManagerWidget.h"
+#include "../CharacterAttributeSet.h"
+#include "../GameplayEffect_InstantHeal.h"
 
 UInventoryItemWidget::UInventoryItemWidget(const FObjectInitializer &ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -209,6 +212,24 @@ void UInventoryItemWidget::UseConsumableItem()
 	}
 	else
 	{
+		// Ability 활성화 실패 (CanActivateAbility에서 false 반환)
+		// 체력이 꽉 찬 경우 Toast 메시지 표시
+		UToastManagerWidget* ToastManager = PlayerCharacter->ToastManagerWidget;
+		if (ToastManager)
+		{
+			// ConsumableEffect가 GameplayEffect_InstantHeal인지 체크 (IsA 관계)
+			if (ConsumableData->ConsumableEffect && ConsumableData->ConsumableEffect->IsChildOf(UGameplayEffect_InstantHeal::StaticClass()))
+			{
+				const float CurrentHealth = ASC->GetNumericAttribute(UCharacterAttributeSet::GetHealthAttribute());
+				const float MaxHealth = ASC->GetNumericAttribute(UCharacterAttributeSet::GetMaxHealthAttribute());
+
+				if (CurrentHealth >= MaxHealth)
+				{
+					ToastManager->ShowToast(TEXT("체력이 가득 차서 포션을 사용할 수 없습니다"), 2.0f);
+				}
+			}
+		}
+
 		UE_LOG(LogTemp, Warning, TEXT("UseConsumableItem: Ability 활성화 실패"));
 	}
 }

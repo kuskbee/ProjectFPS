@@ -88,6 +88,11 @@ bool UInventoryComponent::PlaceItemAt(UBaseItemData* Item, int32 GridX, int32 Gr
 		return false;
 	}
 
+	// DataAsset 원본을 보호하기 위해 복제본 생성 (PIE에서 저장 방지)
+	UBaseItemData* ItemCopy = DuplicateObject(Item, this);
+	ItemCopy->ClearFlags(RF_Public | RF_Standalone);
+	ItemCopy->SetFlags(RF_Transient);  // PIE 종료 시 자동 삭제
+
 	// 아이템이 차지할 모든 칸을 "Occupied" 상태로 변경
 	for (int32 Y = 0; Y < Item->GridHeight; ++Y)
 	{
@@ -97,14 +102,13 @@ bool UInventoryComponent::PlaceItemAt(UBaseItemData* Item, int32 GridX, int32 Gr
 			GridSlots[SlotIndex].bIsOccupied = true;
 			GridSlots[SlotIndex].OriginPos = FIntPoint(GridX, GridY);  // 모든 칸에 Origin 좌표 저장
 
-			// 시작점(Origin)에만 ItemData와 스택 정보 저장
+			// 시작점(Origin)에만 ItemData 복제본 저장
 			if (X == 0 && Y == 0)
 			{
-				GridSlots[SlotIndex].ItemData = Item;
+				GridSlots[SlotIndex].ItemData = ItemCopy;
 				GridSlots[SlotIndex].bIsOrigin = true;
-				GridSlots[SlotIndex].CurrentStackSize = StackCount;
-				// BaseItemData의 CurrentStackSize도 동기화
-				Item->CurrentStackSize = StackCount;
+				// BaseItemData 복제본의 CurrentStackSize 설정
+				ItemCopy->CurrentStackSize = StackCount;
 			}
 			else
 			{
@@ -188,17 +192,18 @@ bool UInventoryComponent::AutoPlaceItem(UBaseItemData* Item, int32& OutX, int32&
 				FInventorySlot& Slot = GridSlots[SlotIndex];
 
 				// Origin 슬롯이고 같은 종류의 아이템이며 스택 여유가 있는 경우
-				// DataAsset 경로로 비교 (예: "/Game/Items/Potions/DA_HealthPotion")
+				// ItemID로 비교 (같은 DataAsset에서 나온 아이템들은 같은 ItemID를 가짐)
 				if (Slot.bIsOrigin && Slot.ItemData &&
-					Slot.ItemData->GetPathName() == Item->GetPathName() &&
-					Slot.CurrentStackSize + StackCount <= Item->MaxStackSize)
+					Slot.ItemData->ItemID != NAME_None &&
+					Slot.ItemData->ItemID == Item->ItemID &&
+					Slot.ItemData->CurrentStackSize + StackCount <= Item->MaxStackSize)
 				{
 					// 기존 스택에 추가
-					Slot.CurrentStackSize += StackCount;
+					Slot.ItemData->CurrentStackSize += StackCount;
 					OutX = X;
 					OutY = Y;
 					UE_LOG(LogTemp, Log, TEXT("AutoPlaceItem 스택 추가: %s x%d (총 %d개) at (%d, %d)"),
-						*Item->GetItemName(), StackCount, Slot.CurrentStackSize, X, Y);
+						*Item->GetItemName(), StackCount, Slot.ItemData->CurrentStackSize, X, Y);
 
 					// 인벤토리 변경 이벤트
 					OnInventoryChanged.Broadcast();
@@ -272,7 +277,7 @@ bool UInventoryComponent::MoveItem(int32 FromX, int32 FromY, int32 ToX, int32 To
 	}
 
 	// 새 위치에 배치
-	PlaceItemAt(Item, ToX, ToY);
+	PlaceItemAt(Item, ToX, ToY, Item->CurrentStackSize);
 
 	UE_LOG(LogTemp, Log, TEXT("아이템 이동 성공: %s (%d, %d) -> (%d, %d)"),
 		*Item->GetItemName(), OriginX, OriginY, ToX, ToY);
@@ -342,9 +347,16 @@ int32 UInventoryComponent::GetItemStackCount(int32 GridX, int32 GridY) const
 		return 0;  // 아이템이 없음
 	}
 
-	// Origin 슬롯의 스택 개수 반환
+	// Origin 슬롯의 ItemData->CurrentStackSize 반환
 	int32 OriginIndex = GetSlotIndex(OriginX, OriginY);
-	return GridSlots[OriginIndex].CurrentStackSize;
+	const FInventorySlot& Slot = GridSlots[OriginIndex];
+
+	if (Slot.ItemData)
+	{
+		return Slot.ItemData->CurrentStackSize;
+	}
+
+	return 0;
 }
 
 bool UInventoryComponent::DecreaseStackAt(int32 GridX, int32 GridY, int32 Amount)
@@ -360,31 +372,31 @@ bool UInventoryComponent::DecreaseStackAt(int32 GridX, int32 GridY, int32 Amount
 	int32 OriginIndex = GetSlotIndex(OriginX, OriginY);
 	FInventorySlot& Slot = GridSlots[OriginIndex];
 
+	if (!Slot.ItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DecreaseStackAt: ItemData가 없습니다."));
+		return false;
+	}
+
 	// 스택 개수 체크
-	if (Slot.CurrentStackSize < Amount)
+	if (Slot.ItemData->CurrentStackSize < Amount)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("DecreaseStackAt: 스택 개수 부족. 현재: %d, 요청: %d"),
-			Slot.CurrentStackSize, Amount);
+			Slot.ItemData->CurrentStackSize, Amount);
 		return false;
 	}
 
 	// 스택 감소
-	Slot.CurrentStackSize -= Amount;
-
-	// BaseItemData의 CurrentStackSize도 동기화
-	if (Slot.ItemData)
-	{
-		Slot.ItemData->CurrentStackSize = Slot.CurrentStackSize;
-	}
+	Slot.ItemData->CurrentStackSize -= Amount;
 
 	// 스택이 0이 되면 아이템 제거
-	if (Slot.CurrentStackSize <= 0)
+	if (Slot.ItemData->CurrentStackSize <= 0)
 	{
 		UE_LOG(LogTemp, Log, TEXT("DecreaseStackAt: 스택이 0이 되어 아이템 제거"));
 		return RemoveItemAt(OriginX, OriginY);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("DecreaseStackAt: %d개 감소, 남은 스택: %d"), Amount, Slot.CurrentStackSize);
+	UE_LOG(LogTemp, Log, TEXT("DecreaseStackAt: %d개 감소, 남은 스택: %d"), Amount, Slot.ItemData->CurrentStackSize);
 
 	// 인벤토리 변경 이벤트
 	OnInventoryChanged.Broadcast();

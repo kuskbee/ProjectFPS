@@ -6,6 +6,8 @@
 #include "FPSPlayerCharacter.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayTags.h"
+#include "CharacterAttributeSet.h"
+#include "GameplayEffect_InstantHeal.h"
 
 UGameplayAbility_UseConsumable::UGameplayAbility_UseConsumable()
 {
@@ -41,6 +43,26 @@ bool UGameplayAbility_UseConsumable::CanActivateAbility(const FGameplayAbilitySp
 	{
 		UE_LOG(LogTemp, Warning, TEXT("CanActivateAbility: ConsumableData 또는 ConsumableEffect가 없습니다."));
 		return false;
+	}
+
+	// 회복 포션인 경우 체력이 꽉 찼는지 체크
+	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	if (ASC)
+	{
+		// ConsumableEffect가 GameplayEffect_InstantHeal인지 체크 (IsA 관계)
+		if (ConsumableData->ConsumableEffect && ConsumableData->ConsumableEffect->IsChildOf(UGameplayEffect_InstantHeal::StaticClass()))
+		{
+			// Health와 MaxHealth 가져오기
+			const float CurrentHealth = ASC->GetNumericAttribute(UCharacterAttributeSet::GetHealthAttribute());
+			const float MaxHealth = ASC->GetNumericAttribute(UCharacterAttributeSet::GetMaxHealthAttribute());
+
+			// Health가 이미 최대치면 사용 불가
+			if (CurrentHealth >= MaxHealth)
+			{
+				UE_LOG(LogTemp, Warning, TEXT("CanActivateAbility: 체력이 가득 차서 포션을 사용할 수 없습니다."));
+				return false;
+			}
+		}
 	}
 
 	return true;

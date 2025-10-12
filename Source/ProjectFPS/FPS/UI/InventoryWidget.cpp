@@ -293,7 +293,8 @@ void UInventoryWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDropEve
 		bool bRestored = InventoryComponent->PlaceItemAt(
 			DragOp->DraggedItem,
 			DragOp->OriginGridX,
-			DragOp->OriginGridY
+			DragOp->OriginGridY,
+			(DragOp->DraggedItem) ? DragOp->DraggedItem->CurrentStackSize : 1
 		);
 
 		if (bRestored)
@@ -512,14 +513,14 @@ bool UInventoryWidget::TryPlaceItemAtMouse(const FGeometry& MyGeometry, const FV
 	{
 		if (DragOp->DragSource == EItemDragSource::Grid)
 		{
-			InventoryComponent->PlaceItemAt(DragOp->DraggedItem, DragOp->OriginGridX, DragOp->OriginGridY);
+			InventoryComponent->PlaceItemAt(DragOp->DraggedItem, DragOp->OriginGridX, DragOp->OriginGridY, DragOp->DraggedItem->CurrentStackSize);
 		}
 		// WeaponSlot의 경우 아무것도 안함 (장착 상태 유지)
 		return false;
 	}
 
 	// 배치 가능하면 실제 배치
-	bool bSuccess = InventoryComponent->PlaceItemAt(DragOp->DraggedItem, GridPos.X, GridPos.Y);
+	bool bSuccess = InventoryComponent->PlaceItemAt(DragOp->DraggedItem, GridPos.X, GridPos.Y, DragOp->DraggedItem->CurrentStackSize);
 
 	// 성공 시 원래 위치 처리
 	if (bSuccess && DragOp->DragSource == EItemDragSource::WeaponSlot && WeaponSlotComponent)

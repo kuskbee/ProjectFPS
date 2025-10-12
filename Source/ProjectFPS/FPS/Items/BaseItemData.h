@@ -30,6 +30,10 @@ class PROJECTFPS_API UBaseItemData : public UDataAsset
 public:
 	UBaseItemData();
 
+	/** 아이템 고유 ID (스택 병합 판별용) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info")
+	FName ItemID = NAME_None;
+
 	/** 아이템 이름 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info")
 	FString ItemName = TEXT("Unknown Item");
@@ -50,8 +54,8 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item Info", meta = (ClampMin = 1, ClampMax = 999))
 	int32 MaxStackSize = 1;
 
-	/** 현재 스택 개수 (런타임 정보) */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Runtime")
+	/** 현재 스택 개수 (런타임 정보, Transient로 저장되지 않음) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Runtime", meta = (DisplayName = "Current Stack Size (Runtime Only)"))
 	int32 CurrentStackSize = 1;
 
 	/** 아이템 희귀도 (나중에 색상 등에 활용) */
