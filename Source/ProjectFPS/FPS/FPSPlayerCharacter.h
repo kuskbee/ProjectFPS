@@ -90,6 +90,14 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = "UI")
 	TObjectPtr<UToastManagerWidget> ToastManagerWidget;
 
+	/** ActiveSkillWidget 클래스 (Blueprint에서 설정) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class UActiveSkillWidget> ActiveSkillWidgetClass;
+
+	/** 현재 활성화된 ActiveSkillWidget 인스턴스 */
+	UPROPERTY(BlueprintReadOnly, Category = "UI")
+	TObjectPtr<class UActiveSkillWidget> ActiveSkillWidget;
+
 public:
 	// 플레이어 입력 액션들
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")

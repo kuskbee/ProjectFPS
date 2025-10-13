@@ -219,16 +219,23 @@ void USkillComponent::ApplySkillEffects(UBaseSkillData* SkillData)
 			CachedASC->GiveAbility(AbilitySpec);
 			UE_LOG(LogTemp, Log, TEXT("GameplayAbility 부여: %s"), *AbilityClass->GetName());
 
-			// 액티브 스킬인 경우 AbilityTag 저장 (Q키용)
+			// 액티브 스킬인 경우 AbilityTag + SkillData 저장 (Q키 + UI용)
 			if (SkillData->SkillType == ESkillType::Active && AbilityClass.GetDefaultObject())
 			{
 				const UGameplayAbility* AbilityCDO = AbilityClass.GetDefaultObject();
 				const FGameplayTagContainer& AssetTags = AbilityCDO->GetAssetTags();
 				if (AssetTags.Num() > 0)
 				{
-					// 첫 번째 태그를 액티브 스킬 태그로 저장
+					// 첫 번째 태그를 액티브 스킬 태그로 저장 (Q키 활성화용)
 					ActiveSkillAbilityTag = AssetTags.First();
-					UE_LOG(LogTemp, Log, TEXT("액티브 스킬 태그 저장: %s"), *ActiveSkillAbilityTag.ToString());
+					// SkillData 저장 (UI용 - 아이콘, 이름 등)
+					ActiveSkillData = SkillData;
+
+					UE_LOG(LogTemp, Log, TEXT("액티브 스킬 저장: %s (태그: %s)"),
+						*SkillData->SkillName.ToString(), *ActiveSkillAbilityTag.ToString());
+
+					// UI 업데이트 델리게이트 호출 - SkillData 전달!
+					OnActiveSkillChanged.Broadcast(ActiveSkillData);
 				}
 			}
 		}

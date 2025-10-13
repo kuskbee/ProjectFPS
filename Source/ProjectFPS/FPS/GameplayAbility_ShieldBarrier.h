@@ -29,6 +29,15 @@ public:
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
 		const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+	/** 쿨다운 적용 오버라이드 - SetByCaller로 동적 시간 전달 */
+	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo) const override;
+
+	/** 활성화 가능 여부 체크 - 쿨다운 중이면 막음 */
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr,
+		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+
 protected:
 	/** 방어막 지속 시간 (초) */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shield Barrier")
@@ -42,17 +51,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shield Barrier")
 	TSubclassOf<AActor> BarrierActorClass;
 
-	/** 쿨다운 시간 (초) */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shield Barrier")
+	/** 쿨다운 시간 (초) - SetByCaller로 전달 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Cooldown")
 	float CooldownDuration = 60.0f;
 
-	/** 쿨다운 GameplayEffect */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shield Barrier")
-	TSubclassOf<UGameplayEffect> CooldownEffect;
-
-	/** 쿨다운 Tag (UI 표시용) */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Shield Barrier")
-	FGameplayTagContainer CooldownTags;
+	// 표준 GAS 쿨다운 시스템 사용 (GetCooldownTags() 자동 지원)
+	// CooldownGameplayEffectClass는 UGameplayAbility 부모 클래스에서 상속받음
+	// Blueprint에서 "Cooldown" 카테고리에 GE_Cooldown 할당
 
 private:
 	/** 현재 활성화된 방어막 구체 */
@@ -70,4 +75,7 @@ private:
 
 	/** 타이머 콜백: 방어막 종료 */
 	void OnBarrierExpired();
+
+	/** 쿨다운 체크 헬퍼 함수 (코드 중복 제거) */
+	bool IsOnCooldown(const FGameplayAbilityActorInfo* ActorInfo) const;
 };

@@ -7,6 +7,7 @@
 #include "FPS/UI/SkillTreeWidget.h"
 #include "FPS/UI/InventoryWidget.h"
 #include "FPS/UI/ToastManagerWidget.h"
+#include "FPS/UI/ActiveSkillWidget.h"
 #include "FPS/Components/WeaponSlotComponent.h"
 #include "FPS/Components/SkillComponent.h"
 #include "FPS/Components/InventoryComponent.h"
@@ -98,6 +99,24 @@ void AFPSPlayerCharacter::BeginPlay()
 			{
 				ToastManagerWidget->AddToViewport(10); // 높은 ZOrder로 최상단 표시
 				UE_LOG(LogTemp, Log, TEXT("ToastManager 위젯 생성 완료"));
+			}
+		}
+
+		// ActiveSkillWidget 생성
+		if (ActiveSkillWidgetClass)
+		{
+			ActiveSkillWidget = CreateWidget<UActiveSkillWidget>(PC, ActiveSkillWidgetClass);
+			if (ActiveSkillWidget)
+			{
+				ActiveSkillWidget->AddToViewport(5); // ZOrder 5 (HUD보다 위, Toast보다 아래)
+				UE_LOG(LogTemp, Log, TEXT("ActiveSkillWidget 생성 완료"));
+
+				// SkillComponent 델리게이트 바인딩
+				if (SkillComponent)
+				{
+					SkillComponent->OnActiveSkillChanged.AddDynamic(ActiveSkillWidget, &UActiveSkillWidget::UpdateActiveSkill);
+					UE_LOG(LogTemp, Log, TEXT("ActiveSkillWidget 델리게이트 바인딩 완료"));
+				}
 			}
 		}
 	}

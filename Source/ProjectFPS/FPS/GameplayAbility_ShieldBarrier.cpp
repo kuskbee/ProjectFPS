@@ -21,40 +21,24 @@ void UGameplayAbility_ShieldBarrier::ActivateAbility(const FGameplayAbilitySpecH
 	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo,
 	const FGameplayEventData* TriggerEventData)
 {
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	// ⭐ CommitAbility() 대신 CommitCheck()만 호출 (쿨다운 자동 적용 방지)
+	if (!CommitCheck(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+
+	// Cost 수동 적용 (있다면)
+	CommitExecute(Handle, ActorInfo, ActivationInfo);
+
+	// ⭐ 쿨다운 수동 적용 (EndAbility()에서 제거되지 않도록!)
+	ApplyCooldown(Handle, ActorInfo, ActivationInfo);
 
 	// 방어막 HP 초기화
 	CurrentBarrierHealth = BarrierHealth;
 
 	// 방어막 구체 생성
 	SpawnBarrierVisual();
-
-	// 쿨다운 적용
-	if (CooldownEffect && ActorInfo->AbilitySystemComponent.IsValid())
-	{
-		FGameplayEffectContextHandle ContextHandle = ActorInfo->AbilitySystemComponent->MakeEffectContext();
-		ContextHandle.AddInstigator(ActorInfo->OwnerActor.Get(), ActorInfo->AvatarActor.Get());
-
-		FGameplayEffectSpecHandle SpecHandle = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(
-			CooldownEffect, 1.0f, ContextHandle);
-
-		if (SpecHandle.IsValid())
-		{
-			// SetByCaller로 쿨다운 시간 설정
-			SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Cooldown")), CooldownDuration);
-
-			// 동적 Cooldown Tag 추가
-			SpecHandle.Data->DynamicGrantedTags.AppendTags(CooldownTags);
-
-			// Effect 적용
-			ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-			UE_LOG(LogTemp, Log, TEXT("쿨다운 적용: %.0f초"), CooldownDuration);
-		}
-	}
 
 	// 지속 시간 타이머 설정
 	FTimerHandle BarrierTimerHandle;
@@ -69,7 +53,76 @@ void UGameplayAbility_ShieldBarrier::ActivateAbility(const FGameplayAbilitySpecH
 		);
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("방어막 스킬 활성화 (HP: %.0f, 지속시간: %.1f초)"), BarrierHealth, BarrierDuration);
+	UE_LOG(LogTemp, Log, TEXT("방어막 스킬 활성화 (HP: %.0f, 지속시간: %.1f초, 쿨다운: %.1f초)"), BarrierHealth, BarrierDuration, CooldownDuration);
+}
+
+void UGameplayAbility_ShieldBarrier::ApplyCooldown(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	UGameplayEffect* CooldownGE = GetCooldownGameplayEffect();
+	if (CooldownGE && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		// ⭐ ApplyGameplayEffectToOwner 대신 직접 구현 (SetByCaller 추가)
+		// HasAuthorityOrPredictionKey 체크 포함
+		if (HasAuthorityOrPredictionKey(ActorInfo, &ActivationInfo))
+		{
+			FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(
+				Handle, ActorInfo, ActivationInfo, CooldownGE->GetClass(), GetAbilityLevel(Handle, ActorInfo));
+
+			if (SpecHandle.IsValid())
+			{
+				// ⭐ SetByCaller로 쿨다운 시간 전달!
+				SpecHandle.Data->SetSetByCallerMagnitude(
+					FGameplayTag::RequestGameplayTag(FName("Data.Cooldown")),
+					CooldownDuration
+				);
+
+				// Cooldown.ActiveSkill 태그는 GameplayEffect_Cooldown 생성자에서 자동 추가됨!
+
+				// 쿨다운 Effect 적용
+				ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+
+				UE_LOG(LogTemp, Log, TEXT("방어막 쿨다운 적용: %.0f초"), CooldownDuration);
+			}
+		}
+	}
+}
+
+bool UGameplayAbility_ShieldBarrier::CanActivateAbility(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
+	const FGameplayTagContainer* TargetTags, OUT FGameplayTagContainer* OptionalRelevantTags) const
+{
+	// 부모 클래스 체크 (기본 조건들)
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+
+	// ⭐ 쿨다운 체크 (헬퍼 함수로 리팩토링)
+	if (IsOnCooldown(ActorInfo))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("방어막 스킬 쿨다운 중! 사용 불가"));
+		return false;
+	}
+
+	return true;
+}
+
+bool UGameplayAbility_ShieldBarrier::IsOnCooldown(const FGameplayAbilityActorInfo* ActorInfo) const
+{
+	if (!ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		return false;
+	}
+
+	// ASC에서 "Cooldown.ActiveSkill" 태그를 가진 Effect 쿼리
+	FGameplayTag CooldownTag = FGameplayTag::RequestGameplayTag(FName("Cooldown.ActiveSkill"));
+	FGameplayEffectQuery Query;
+	Query.EffectTagQuery = FGameplayTagQuery::MakeQuery_MatchAnyTags(FGameplayTagContainer(CooldownTag));
+
+	TArray<FActiveGameplayEffectHandle> ActiveCooldowns = ActorInfo->AbilitySystemComponent->GetActiveEffects(Query);
+
+	return ActiveCooldowns.Num() > 0;
 }
 
 void UGameplayAbility_ShieldBarrier::EndAbility(const FGameplayAbilitySpecHandle Handle,

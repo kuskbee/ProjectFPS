@@ -83,6 +83,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Skills")
 	FGameplayTag GetActiveSkillAbilityTag() const { return ActiveSkillAbilityTag; }
 
+	/** 습득한 액티브 스킬 데이터 반환 (UI용) */
+	UFUNCTION(BlueprintPure, Category = "Skills")
+	UBaseSkillData* GetActiveSkillData() const { return ActiveSkillData; }
+
+	/** 액티브 스킬 변경 델리게이트 (UI 업데이트용) - SkillData 직접 전달 */
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActiveSkillChanged, UBaseSkillData*, NewActiveSkillData);
+	UPROPERTY(BlueprintAssignable, Category = "Skills")
+	FOnActiveSkillChanged OnActiveSkillChanged;
+
 private:
 	/** 스킬 효과 적용 (GameplayEffect + Ability) */
 	void ApplySkillEffects(UBaseSkillData* SkillData);
@@ -96,4 +105,8 @@ private:
 
 	/** 습득한 액티브 스킬의 AbilityTag (Q키로 활성화) */
 	FGameplayTag ActiveSkillAbilityTag;
+
+	/** 습득한 액티브 스킬 데이터 (UI용 - 아이콘, 이름 등) */
+	UPROPERTY()
+	TObjectPtr<UBaseSkillData> ActiveSkillData;
 };

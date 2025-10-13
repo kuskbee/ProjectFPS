@@ -1,6 +1,7 @@
 // GameplayEffect_Cooldown.cpp
 
 #include "GameplayEffect_Cooldown.h"
+#include "GameplayEffectComponents/AssetTagsGameplayEffectComponent.h"
 
 UGameplayEffect_Cooldown::UGameplayEffect_Cooldown()
 {
@@ -12,8 +13,14 @@ UGameplayEffect_Cooldown::UGameplayEffect_Cooldown()
 	CooldownDuration.DataTag = FGameplayTag::RequestGameplayTag(FName("Data.Cooldown"));
 	DurationMagnitude = FGameplayEffectModifierMagnitude(CooldownDuration);
 
-	// Cooldown Tag는 Ability에서 동적으로 추가
-	// (SpecHandle.Data->GetDynamicGrantedTags().AppendTags(CooldownTags) 방식)
+	// ⭐ Cooldown.ActiveSkill 태그 추가 (GetCooldownTags()가 이걸 반환함!)
+	// UE 5.6+ 새로운 API: UAssetTagsGameplayEffectComponent 사용
+	UAssetTagsGameplayEffectComponent* AssetTagsComp = CreateDefaultSubobject<UAssetTagsGameplayEffectComponent>(TEXT("AssetTagsComponent"));
+
+	FInheritedTagContainer AssetTags;
+	AssetTags.Added.AddTag(FGameplayTag::RequestGameplayTag(FName("Cooldown.ActiveSkill")));
+
+	AssetTagsComp->SetAndApplyAssetTagChanges(AssetTags);
 
 	// 스택 정책: 쿨다운은 스택 안됨
 	StackingType = EGameplayEffectStackingType::None;
