@@ -125,9 +125,26 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 	{
 		float DamageMagnitude = Data.EvaluatedData.Magnitude;
 
-		// 1. 음수 Magnitude = 데미지 (Health 감소) → Shield 처리
+		// 1. 음수 Magnitude = 데미지 (Health 감소) → Shield 처리 + 공격자 추적
 		if (DamageMagnitude < 0.0f)
 		{
+			// 공격자 추적 (스킬 포인트 보상용)
+			AActor* OwnerActor = GetOwningActor();
+			if (OwnerActor)
+			{
+				if (AFPSCharacter* Character = Cast<AFPSCharacter>(OwnerActor))
+				{
+					// EffectContext에서 Instigator 가져오기
+					const FGameplayEffectContextHandle& ContextHandle = Data.EffectSpec.GetEffectContext();
+					AActor* InstigatorActor = ContextHandle.GetInstigator();
+					if (APawn* InstigatorPawn = Cast<APawn>(InstigatorActor))
+					{
+						Character->SetLastAttacker(InstigatorPawn);
+						UE_LOG(LogTemp, VeryVerbose, TEXT("공격자 추적: %s → %s"), *InstigatorPawn->GetName(), *Character->GetName());
+					}
+				}
+			}
+
 			float AbsoluteDamage = -DamageMagnitude;
 			float CurrentShield = GetShield();
 

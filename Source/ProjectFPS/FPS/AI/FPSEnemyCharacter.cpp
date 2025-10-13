@@ -13,6 +13,10 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "DrawDebugHelpers.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
+#include "GameplayEffect.h"
+#include "GameplayTagContainer.h"
 
 AFPSEnemyCharacter::AFPSEnemyCharacter()
 {
@@ -69,6 +73,47 @@ void AFPSEnemyCharacter::OnPlayerDeath()
 	bIsAlive = false;
 
 	UE_LOG(LogTemp, Warning, TEXT("적 캐릭터 사망!"));
+
+	// 스킬 포인트 보상 (킬러에게 지급)
+	if (SkillPointGainEffect && AbilitySystemComponent)
+	{
+		// 마지막으로 데미지를 준 플레이어 찾기
+		APawn* Killer = GetLastAttacker();
+		if (Killer)
+		{
+			// IAbilitySystemInterface로 Cast
+			IAbilitySystemInterface* ASI = Cast<IAbilitySystemInterface>(Killer);
+			if (ASI && ASI->GetAbilitySystemComponent())
+			{
+				UAbilitySystemComponent* KillerASC = ASI->GetAbilitySystemComponent();
+
+				// GameplayEffect Spec 생성
+				FGameplayEffectContextHandle ContextHandle = AbilitySystemComponent->MakeEffectContext();
+				ContextHandle.AddInstigator(this, this);
+				ContextHandle.AddHitResult(FHitResult());
+
+				FGameplayEffectSpecHandle SpecHandle = AbilitySystemComponent->MakeOutgoingSpec(
+					SkillPointGainEffect,
+					1.0f,  // Level
+					ContextHandle
+				);
+
+				if (SpecHandle.IsValid())
+				{
+					// SetByCaller로 스킬 포인트 보상량 전달
+					SpecHandle.Data->SetSetByCallerMagnitude(
+						FGameplayTag::RequestGameplayTag(FName("Data.SkillPointGain")),
+						static_cast<float>(SkillPointReward)
+					);
+
+					// 킬러에게 Effect 적용
+					KillerASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+
+					UE_LOG(LogTemp, Log, TEXT("스킬 포인트 %d 지급 (킬러: %s)"), SkillPointReward, *Killer->GetName());
+				}
+			}
+		}
+	}
 
 	// 움직임 정지
 	GetCharacterMovement()->StopMovementImmediately();

@@ -126,9 +126,21 @@ protected:
 	TSubclassOf<UAnimInstance> DefaultFirstPersonAnimClass;
 	TSubclassOf<UAnimInstance> DefaultThirdPersonAnimClass;
 
+	/** 마지막으로 데미지를 준 공격자 (스킬 포인트 보상용) */
+	UPROPERTY()
+	TWeakObjectPtr<APawn> LastAttacker;
+
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
 	TSubclassOf<UGameplayEffect> HealEffect;
+
+	/** 마지막 공격자 설정 (GameplayEffect에서 호출) */
+	UFUNCTION(BlueprintCallable, Category = "Combat")
+	void SetLastAttacker(APawn* Attacker) { LastAttacker = Attacker; }
+
+	/** 마지막 공격자 가져오기 */
+	UFUNCTION(BlueprintPure, Category = "Combat")
+	APawn* GetLastAttacker() const { return LastAttacker.Get(); }
 
 	// 무기 슬롯 관리 함수들
 	UFUNCTION(BlueprintCallable, Category="Weapons")

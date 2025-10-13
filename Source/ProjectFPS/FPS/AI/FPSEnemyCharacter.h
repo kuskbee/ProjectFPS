@@ -42,6 +42,14 @@ protected:
 
 	FTimerHandle DeathTimer;
 
+	/** 처치 시 보상할 스킬 포인트 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rewards")
+	int32 SkillPointReward = 1;
+
+	/** 스킬 포인트 부여 GameplayEffect */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rewards")
+	TSubclassOf<class UGameplayEffect> SkillPointGainEffect;
+
 	/** AI 전용: 기본 무기 데이터 (WeaponItemData 기반) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Weapon")
 	TSubclassOf<UWeaponItemData> DefaultWeaponData;

@@ -54,9 +54,9 @@ void UInventoryItemWidget::SetItemData(UBaseItemData *InItemData, int32 InGridX,
 			if (ItemData)
 			{
 				UE_LOG(LogTemp, Log, TEXT("스택 텍스트 숨김: %s (Stackable: %s, Count: %d)"),
-					*ItemData->GetItemName(),
-					ItemData->IsStackable() ? TEXT("Yes") : TEXT("No"),
-					StackCount);
+					   *ItemData->GetItemName(),
+					   ItemData->IsStackable() ? TEXT("Yes") : TEXT("No"),
+					   StackCount);
 			}
 		}
 	}
@@ -103,14 +103,14 @@ void UInventoryItemWidget::NativeOnDragDetected(const FGeometry &InGeometry, con
 		return;
 	}
 
-	// ⭐ DragOp 데이터 설정
+	// DragOp 데이터 설정
 	DragOp->DraggedItem = ItemData;
 	DragOp->OriginGridX = GridX;
 	DragOp->OriginGridY = GridY;
 	DragOp->DragSource = EItemDragSource::Grid; // 인벤토리 그리드에서 드래그
 
 	//// 드래그 비주얼 설정 (아이템 이미지를 따라다니게)
-	//DragOp->DefaultDragVisual = this;
+	// DragOp->DefaultDragVisual = this;
 	DragOp->Pivot = EDragPivot::MouseDown;
 
 	OutOperation = DragOp;
@@ -141,7 +141,7 @@ FReply UInventoryItemWidget::NativeOnMouseButtonUp(const FGeometry &InGeometry, 
 void UInventoryItemWidget::UseConsumableItem()
 {
 	// 소모품인지 체크
-	UConsumableItemData* ConsumableData = Cast<UConsumableItemData>(ItemData);
+	UConsumableItemData *ConsumableData = Cast<UConsumableItemData>(ItemData);
 	if (!ConsumableData)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UseConsumableItem: 소모품이 아닙니다."));
@@ -149,15 +149,15 @@ void UInventoryItemWidget::UseConsumableItem()
 	}
 
 	// Owner 확인
-	APawn* OwnerPawn = GetOwningPlayerPawn();
-	AFPSPlayerCharacter* PlayerCharacter = Cast<AFPSPlayerCharacter>(OwnerPawn);
+	APawn *OwnerPawn = GetOwningPlayerPawn();
+	AFPSPlayerCharacter *PlayerCharacter = Cast<AFPSPlayerCharacter>(OwnerPawn);
 	if (!PlayerCharacter)
 	{
 		UE_LOG(LogTemp, Error, TEXT("UseConsumableItem: PlayerCharacter를 찾을 수 없습니다."));
 		return;
 	}
 
-	UAbilitySystemComponent* ASC = PlayerCharacter->GetAbilitySystemComponent();
+	UAbilitySystemComponent *ASC = PlayerCharacter->GetAbilitySystemComponent();
 	if (!ASC)
 	{
 		UE_LOG(LogTemp, Error, TEXT("UseConsumableItem: AbilitySystemComponent를 찾을 수 없습니다."));
@@ -173,9 +173,9 @@ void UInventoryItemWidget::UseConsumableItem()
 
 	// "Ability.UseConsumable" 태그를 가진 Ability 찾기
 	FGameplayTag UseConsumableTag = FGameplayTag::RequestGameplayTag(FName("Ability.UseConsumable"));
-	FGameplayAbilitySpec* FoundSpec = nullptr;
+	FGameplayAbilitySpec *FoundSpec = nullptr;
 
-	for (FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+	for (FGameplayAbilitySpec &Spec : ASC->GetActivatableAbilities())
 	{
 		if (Spec.Ability && Spec.Ability->GetAssetTags().HasTag(UseConsumableTag))
 		{
@@ -191,7 +191,7 @@ void UInventoryItemWidget::UseConsumableItem()
 	}
 
 	// Ability 인스턴스 가져오기 (InstancedPerActor이므로 인스턴스가 존재함)
-	UGameplayAbility_UseConsumable* UseConsumableAbility = Cast<UGameplayAbility_UseConsumable>(FoundSpec->GetPrimaryInstance());
+	UGameplayAbility_UseConsumable *UseConsumableAbility = Cast<UGameplayAbility_UseConsumable>(FoundSpec->GetPrimaryInstance());
 	if (!UseConsumableAbility)
 	{
 		UE_LOG(LogTemp, Error, TEXT("UseConsumableItem: Ability 인스턴스를 가져올 수 없습니다."));
@@ -214,7 +214,7 @@ void UInventoryItemWidget::UseConsumableItem()
 	{
 		// Ability 활성화 실패 (CanActivateAbility에서 false 반환)
 		// 체력이 꽉 찬 경우 Toast 메시지 표시
-		UToastManagerWidget* ToastManager = PlayerCharacter->ToastManagerWidget;
+		UToastManagerWidget *ToastManager = PlayerCharacter->ToastManagerWidget;
 		if (ToastManager)
 		{
 			// ConsumableEffect가 GameplayEffect_InstantHeal인지 체크 (IsA 관계)
