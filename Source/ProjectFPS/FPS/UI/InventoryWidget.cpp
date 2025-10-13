@@ -178,14 +178,56 @@ void UInventoryWidget::AddItemImageToCanvas(UBaseItemData* ItemData, int32 GridX
 
 		// 아이템 크기/위치 계산 (GridPanel 실제 크기 사용)
 		// UniformGridPanel의 SlotPadding은 모든 셀 외부에 균등하게 적용됨
-		float ImageWidth = (ActualSlotWidth * GridSize.X) + (ActualSlotPaddingWidth * (GridSize.X - 1));
-		float ImageHeight = (ActualSlotHeight * GridSize.Y) + (ActualSlotPaddingHeight * (GridSize.Y - 1));
-		float PosX = (ActualSlotWidth + ActualSlotPaddingWidth) * GridX + ActualSlotPaddingWidth;
-		float PosY = (ActualSlotHeight + ActualSlotPaddingHeight) * GridY + ActualSlotPaddingHeight;
+		
+		// Geometry를 기반으로 이미지 위치 및 크기 설정
+		UWidget* OriginCell = GridPanel->GetChildAt(GridX + GridY * InventoryComponent->GetGridWidth());
+		if (!OriginCell)
+		{
+			UE_LOG(LogTemp, Log, TEXT("AddItemImageToCanvas: GridPanel OriginCell GetChildAt 실패! (%d, %d)"), GridX, GridY);
+			return;
+		}
+		const FGeometry& OriginGeo = OriginCell->GetCachedGeometry();
+		FVector2D GridSlotSize = OriginGeo.GetLocalSize();
+		FVector2D OriginSlotScreenPosition = OriginGeo.GetAbsolutePosition();
+		FVector2D LocalPosition = GetCachedGeometry().AbsoluteToLocal(OriginSlotScreenPosition);
 
-		CanvasSlot->SetPosition(FVector2D(PosX, PosY));
-		CanvasSlot->SetSize(FVector2D(ImageWidth, ImageHeight));
-		CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));
+		if (GridSize.X > 1 || GridSize.Y > 1)
+		{
+			/*float ImageWidth = (ActualSlotWidth * GridSize.X) + (ActualSlotPaddingWidth * (GridSize.X - 1));
+			float ImageHeight = (ActualSlotHeight * GridSize.Y) + (ActualSlotPaddingHeight * (GridSize.Y - 1));
+			float PosX = (ActualSlotWidth + ActualSlotPaddingWidth) * GridX + ActualSlotPaddingWidth;
+			float PosY = (ActualSlotHeight + ActualSlotPaddingHeight) * GridY + ActualSlotPaddingHeight;
+
+			CanvasSlot->SetPosition(FVector2D(PosX, PosY));
+			CanvasSlot->SetSize(FVector2D(ImageWidth, ImageHeight));
+			CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));*/
+
+			int EdgeGridX = GridX + GridSize.X - 1;
+			int EdgeGridY = GridY + GridSize.Y - 1;
+			UWidget* EdgeCell = GridPanel->GetChildAt(EdgeGridX + EdgeGridY * InventoryComponent->GetGridWidth());
+			if (!EdgeCell)
+			{
+				UE_LOG(LogTemp, Log, TEXT("AddItemImageToCanvas: GridPanel EdgeCell GetChildAt 실패! (%d, %d)"), EdgeGridX, EdgeGridY);
+				return;
+			}
+			const FGeometry& EdgeGeo = EdgeCell->GetCachedGeometry();
+			FVector2D EdgeSlotScreenPosition = EdgeGeo.GetAbsolutePosition();
+			FVector2D EdgeLocalPosition = GetCachedGeometry().AbsoluteToLocal(EdgeSlotScreenPosition);
+			FVector2D ImageSize = FVector2D(EdgeLocalPosition.X - LocalPosition.X, EdgeLocalPosition.Y - LocalPosition.Y);
+			UE_LOG(LogTemp, Warning, TEXT("AddItemImageToCanvas: Image Size (%f, %f)"), ImageSize.X, ImageSize.Y);
+
+			CanvasSlot->SetPosition(LocalPosition - FVector2D(1, 1));
+			CanvasSlot->SetSize(ImageSize);
+			CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));
+
+		}
+		else
+		{
+			CanvasSlot->SetPosition(LocalPosition - FVector2D(1, 1));
+			CanvasSlot->SetSize(GridSlotSize);
+			CanvasSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));
+		}
+		
 		return;
 	}
 
@@ -382,28 +424,46 @@ void UInventoryWidget::UpdateDragHighlight(const FVector2D& MousePosition)
 		{
 			FIntPoint ItemSize = CurrentDragOperation->DraggedItem->GetGridSize();
 
-			UWidget* HoverCell = GridPanel->GetChildAt(GridPos.X + GridPos.Y * InventoryComponent->GetGridWidth());
-			if (!HoverCell)
+			UWidget* OriginCell = GridPanel->GetChildAt(GridPos.X + GridPos.Y * InventoryComponent->GetGridWidth());
+			if (!OriginCell)
 			{
 				UE_LOG(LogTemp, Log, TEXT("UpdateDragHighlight: GridPanel GetChildAt 실패! (%d, %d)"), GridPos.X, GridPos.Y);
 				return;
 			}
-			const FGeometry& G = HoverCell->GetCachedGeometry();
-			FVector2D HighlightSize = G.GetLocalSize();
-			FVector2D SlotScreenPosition = G.GetAbsolutePosition();
+			const FGeometry& OriginGeo = OriginCell->GetCachedGeometry();
+			FVector2D GridSlotSize = OriginGeo.GetLocalSize();
+			FVector2D OriginSlotScreenPosition = OriginGeo.GetAbsolutePosition();
 
 			// InventoryWidget의 Geometry를 기준으로 로컬 좌표로 변환
-			FVector2D LocalPosition = GetCachedGeometry().AbsoluteToLocal(SlotScreenPosition);
+			FVector2D LocalPosition = GetCachedGeometry().AbsoluteToLocal(OriginSlotScreenPosition);
 
-			// 실제 셀 크기와 실제 패딩으로 좌표 계산
-			float Width = (HighlightSize.X * ItemSize.X) + (ActualSlotPaddingWidth * (ItemSize.X + 1));
-			float Height = (HighlightSize.Y * ItemSize.Y) + (ActualSlotPaddingHeight * (ItemSize.Y + 1));
-			float PosX = LocalPosition.X;
-			float PosY = LocalPosition.Y;
+			if (ItemSize.X > 1 || ItemSize.Y > 1)
+			{
+				int EdgeGridX = GridPos.X + ItemSize.X;
+				int EdgeGridY = GridPos.Y + ItemSize.Y;
+				UWidget* EdgeCell = GridPanel->GetChildAt(EdgeGridX + EdgeGridY * InventoryComponent->GetGridWidth());
+				if (!EdgeCell)
+				{
+					UE_LOG(LogTemp, Log, TEXT("UpdateDragHighlight: GridPanel EdgeCell GetChildAt 실패! (%d, %d)"), EdgeGridX, EdgeGridY);
+					return;
+				}
+				const FGeometry& EdgeGeo = EdgeCell->GetCachedGeometry();
+				FVector2D EdgeSlotScreenPosition = EdgeGeo.GetAbsolutePosition();
+				FVector2D EdgeLocalPosition = GetCachedGeometry().AbsoluteToLocal(EdgeSlotScreenPosition);
+				FVector2D ImageSize = FVector2D(EdgeLocalPosition.X - LocalPosition.X, EdgeLocalPosition.Y - LocalPosition.Y);
+				UE_LOG(LogTemp, Warning, TEXT("UpdateDragHighlight: Image Size (%f, %f)"), ImageSize.X, ImageSize.Y);
 
-			HighlightSlot->SetPosition(FVector2D(PosX, PosY));
-			HighlightSlot->SetSize(FVector2D(Width, Height));
-			HighlightSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));  // 절대 좌표
+
+				HighlightSlot->SetPosition(LocalPosition - FVector2D(1, 1));
+				HighlightSlot->SetSize(ImageSize);
+				HighlightSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));  // 절대 좌표
+			}
+			else
+			{
+				HighlightSlot->SetPosition(LocalPosition - FVector2D(1, 1));
+				HighlightSlot->SetSize(GridSlotSize);
+				HighlightSlot->SetAnchors(FAnchors(0.0f, 0.0f, 0.0f, 0.0f));  // 절대 좌표
+			}
 		}
 
 		DragHighlightImage->SetVisibility(ESlateVisibility::HitTestInvisible);
@@ -420,7 +480,11 @@ void UInventoryWidget::UpdateWeaponSlotHighlight(const FVector2D& MousePosition,
 	// WeaponItemData만 무기 슬롯에 장착 가능
 	UWeaponItemData* WeaponData = Cast<UWeaponItemData>(CurrentDragOperation->DraggedItem);
 	EWeaponSlot HoverSlot = SlotWidget->GetWeaponSlot();
-	bool bCanEquip = (WeaponData != nullptr) && WeaponSlotComponent->IsSlotEmpty(HoverSlot);
+	bool bCanEquip = (WeaponData != nullptr);
+	if (bCanEquip && CurrentDragOperation->DragSource == EItemDragSource::Grid)
+	{
+		bCanEquip = WeaponSlotComponent->IsSlotEmpty(HoverSlot);
+	}
 
 	// 초록(장착 가능) / 빨강(장착 불가능) 색상 변경
 	FLinearColor HighlightColor = bCanEquip ? FLinearColor::Green : FLinearColor::Red;

@@ -109,8 +109,8 @@ void UInventoryItemWidget::NativeOnDragDetected(const FGeometry &InGeometry, con
 	DragOp->OriginGridY = GridY;
 	DragOp->DragSource = EItemDragSource::Grid; // 인벤토리 그리드에서 드래그
 
-	// 드래그 비주얼 설정 (아이템 이미지를 따라다니게)
-	DragOp->DefaultDragVisual = this;
+	//// 드래그 비주얼 설정 (아이템 이미지를 따라다니게)
+	//DragOp->DefaultDragVisual = this;
 	DragOp->Pivot = EDragPivot::MouseDown;
 
 	OutOperation = DragOp;
