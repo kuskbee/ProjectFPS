@@ -13,6 +13,7 @@ class USkillTreeWidget;
 class UTextBlock;
 class UButton;
 class UImage;
+class UBorder;
 
 /**
  * 개별 스킬 아이템 위젯
@@ -65,11 +66,19 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "SkillTree")
 	TObjectPtr<UUserWidget> ParentSkillTreeWidget;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UBorder> OutlineBorder;
+
 public:
 	// 부모 위젯 설정
 	void SetParentSkillTreeWidget(UUserWidget* InParentWidget) { ParentSkillTreeWidget = InParentWidget; }
 
 private:
+
+	const FLinearColor LearnedColor = FLinearColor::Yellow;
+	const FLinearColor LockedColor = FLinearColor::Gray;
+	const FLinearColor AvailableColor = FLinearColor::Green;
+
 	// Learn 버튼 클릭 핸들러
 	UFUNCTION()
 	void OnLearnButtonClicked();

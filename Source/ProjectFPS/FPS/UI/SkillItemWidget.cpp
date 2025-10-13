@@ -4,6 +4,7 @@
 #include "Components/TextBlock.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
+#include "Components/Border.h"
 #include "Components/SkillComponent.h"
 #include "Skills/BaseSkillData.h"
 #include "UI/SkillTreeWidget.h"
@@ -48,13 +49,19 @@ void USkillItemWidget::SetSkillData(UBaseSkillData* InSkillData, USkillComponent
 		));
 	}
 
+	if (SkillIcon && SkillData->SkillIcon)
+	{
+		SkillIcon->SetBrushFromTexture(SkillData->SkillIcon);
+	}
+
+
 	// 스킬 상태 업데이트
 	UpdateSkillState();
 }
 
 void USkillItemWidget::UpdateSkillState()
 {
-	if (!SkillData || !SkillComponent || !SkillStatusText || !LearnButton)
+	if (!SkillData || !SkillComponent || !SkillStatusText || !LearnButton || !OutlineBorder)
 	{
 		return;
 	}
@@ -66,6 +73,8 @@ void USkillItemWidget::UpdateSkillState()
 	{
 		SkillStatusText->SetText(FText::FromString(TEXT("[Learned]")));
 		LearnButton->SetIsEnabled(false);
+
+		OutlineBorder->SetBrushColor(LearnedColor);
 		return;
 	}
 
@@ -76,11 +85,13 @@ void USkillItemWidget::UpdateSkillState()
 	{
 		SkillStatusText->SetText(FText::FromString(TEXT("[Available]")));
 		LearnButton->SetIsEnabled(true);
+		OutlineBorder->SetBrushColor(AvailableColor);
 	}
 	else
 	{
 		SkillStatusText->SetText(FText::FromString(TEXT("[Locked]")));
 		LearnButton->SetIsEnabled(false);
+		OutlineBorder->SetBrushColor(LockedColor);
 	}
 }
 
