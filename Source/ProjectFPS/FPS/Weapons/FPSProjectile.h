@@ -57,13 +57,25 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "Damage")
 	float Damage = 10.0f;
 
-	/** 데미지 값 설정 함수 (무기에서 호출) */
+	/** 크리티컬 여부 (무기에서 설정) */
+	UPROPERTY(BlueprintReadWrite, Category = "Damage")
+	bool bIsCriticalHit = false;
+
+	/** 데미지 값 및 크리티컬 설정 함수 (무기에서 호출) */
 	UFUNCTION(BlueprintCallable, Category = "Damage")
-	void SetDamage(float NewDamage) { Damage = NewDamage; }
+	void SetDamage(float NewDamage, bool bCritical = false)
+	{
+		Damage = NewDamage;
+		bIsCriticalHit = bCritical;
+	}
 
 	/** 데미지 값 반환 함수 */
 	UFUNCTION(BlueprintPure, Category = "Damage")
 	float GetDamage() const { return Damage; }
+
+	/** 크리티컬 여부 반환 함수 */
+	UFUNCTION(BlueprintPure, Category = "Damage")
+	bool IsCriticalHit() const { return bIsCriticalHit; }
 
 	// ========================================
 	// Visual/Audio Effects

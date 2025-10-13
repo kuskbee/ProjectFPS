@@ -170,7 +170,8 @@ protected:
 	void FireCooldownExpired();
 
 	/** 크리티컬 데미지 계산 (CritChance/CritDamage 기반) */
-	float CalculateFinalDamage() const;
+	/** 최종 데미지 계산 (크리티컬 포함) */
+	float CalculateFinalDamage(bool& bOutIsCritical) const;
 
 	/** AttackSpeedMultiplier를 반영한 실제 연사 간격 반환 */
 	float GetCurrentRefireRate() const;

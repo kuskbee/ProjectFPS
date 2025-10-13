@@ -6,6 +6,13 @@
 #include "FPS/FPSCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
+#include "Blueprint/UserWidget.h"
+#include "UI/DamageNumberWidget.h"
+#include "GameFramework/PlayerController.h"
+#include "Engine/World.h"
+
+// Static 변수 초기화
+TSubclassOf<UDamageNumberWidget> UCharacterAttributeSet::DamageNumberWidgetClass = nullptr;
 
 UCharacterAttributeSet::UCharacterAttributeSet()
 {
@@ -165,10 +172,16 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 
 		// 2. Health 클램핑 (0 ~ MaxHealth)
 		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
-		
+
+		// 3. 데미지 숫자 위젯 표시 (데미지를 받았을 때만)
+		if (DamageMagnitude < 0.0f)
+		{
+			SpawnDamageNumberWidget(Data);
+		}
+
 		if (GetHealth() <= 0.0f)
 		{
-			// 3. Death 처리 (Shield 계산 후 최종 체크!)
+			// 4. Death 처리 (Shield 계산 후 최종 체크!)
 			AActor* OwnerActor = GetOwningActor();
 			if (OwnerActor)
 			{
@@ -229,5 +242,69 @@ void UCharacterAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModC
 	if (Data.EvaluatedData.Attribute == GetShieldAttribute())
 	{
 		SetShield(FMath::Clamp(GetShield(), 0.f, GetMaxShield()));
+	}
+}
+
+void UCharacterAttributeSet::SpawnDamageNumberWidget(const FGameplayEffectModCallbackData& Data)
+{
+	AActor* OwnerActor = GetOwningActor();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	// 월드와 PlayerController 가져오기
+	UWorld* World = OwnerActor->GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// 데미지 값 계산 (음수 → 양수로 변환)
+	float DamageAmount = FMath::Abs(Data.EvaluatedData.Magnitude);
+
+	// 크리티컬 여부 가져오기 (SetByCaller 방식)
+	bool bIsCritical = false;
+	if (Data.EffectSpec.GetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.IsCritical"))) > 0.5f)
+	{
+		bIsCritical = true;
+	}
+
+	// Static 변수에서 위젯 클래스 가져오기 (FPSCharacter BeginPlay에서 설정됨)
+	if (!DamageNumberWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("DamageNumberWidget 클래스를 찾을 수 없습니다!"));
+		return;
+	}
+
+	// 위젯 생성
+	APlayerController* PC = World->GetFirstPlayerController();
+	if (!PC)
+	{
+		return;
+	}
+
+	UDamageNumberWidget* DamageWidget = CreateWidget<UDamageNumberWidget>(PC, DamageNumberWidgetClass);
+	if (!DamageWidget)
+	{
+		return;
+	}
+
+	// 데미지 값 설정
+	DamageWidget->SetDamageNumber(DamageAmount, bIsCritical);
+
+	// 캐릭터 머리 위에 위젯 배치
+	FVector WorldLocation = OwnerActor->GetActorLocation() + FVector(0.0f, 0.0f, 100.0f);  // 머리 위 100cm
+	FVector2D ScreenPosition;
+	if (PC->ProjectWorldLocationToScreen(WorldLocation, ScreenPosition))
+	{
+		// 뷰포트에 추가
+		DamageWidget->AddToViewport(100);  // ZOrder 100 (최상단)
+
+		// 위치 설정 (Canvas Panel에 추가하기 위해서는 SetPositionInViewport 사용)
+		DamageWidget->SetPositionInViewport(ScreenPosition);
+
+		UE_LOG(LogTemp, Log, TEXT("데미지 숫자 위젯 생성: %.0f (크리티컬: %s) at (%.0f, %.0f)"),
+			DamageAmount, bIsCritical ? TEXT("예") : TEXT("아니오"), ScreenPosition.X, ScreenPosition.Y);
 	}
 }

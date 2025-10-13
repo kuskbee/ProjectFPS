@@ -320,8 +320,9 @@ void AFPSWeapon::FireProjectile(const FVector& TargetLocation)
 		// AFPSProjectile로 캐스팅하여 데미지 설정
 		if (AFPSProjectile* FPSProjectile = Cast<AFPSProjectile>(Projectile))
 		{
-			float FinalDamage = CalculateFinalDamage();
-			FPSProjectile->SetDamage(FinalDamage);
+			bool bIsCritical = false;
+			float FinalDamage = CalculateFinalDamage(bIsCritical);
+			FPSProjectile->SetDamage(FinalDamage, bIsCritical);
 		}
 	}
 
@@ -625,8 +626,11 @@ void AFPSWeapon::SetWeaponOwner(AActor* WeaponHolder)
 	PawnOwner = Cast<APawn>(WeaponHolder);
 }
 
-float AFPSWeapon::CalculateFinalDamage() const
+float AFPSWeapon::CalculateFinalDamage(bool& bOutIsCritical) const
 {
+	// 기본값: 크리티컬 아님
+	bOutIsCritical = false;
+
 	if (!WeaponItemData || !PawnOwner)
 	{
 		return 0.0f;
@@ -665,6 +669,7 @@ float AFPSWeapon::CalculateFinalDamage() const
 	if (RandomValue < CritChance)
 	{
 		// 크리티컬 성공!
+		bOutIsCritical = true;
 		float FinalDamage = BaseDamage * CritDamage;
 		UE_LOG(LogTemp, Warning, TEXT("크리티컬 히트! 기본: %.0f → 최종: %.0f (%.0f%%)"),
 			BaseDamage, FinalDamage, CritDamage * 100.0f);

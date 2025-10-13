@@ -149,4 +149,8 @@ public:
 	/** 게임 시작 시 자동으로 부여할 어빌리티들 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+
+	/** DamageNumberWidget 클래스 (Blueprint에서 설정, 플레이어/적 공통) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<class UDamageNumberWidget> DamageNumberWidgetClass;
 };

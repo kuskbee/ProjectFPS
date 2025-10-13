@@ -106,9 +106,17 @@ bool AFPSProjectile::ApplyDamageToTarget(AActor* Target)
 	{
 		// Damage 값을 GameplayEffect Magnitude로 설정
 		SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(FName("Data.Damage")), -Damage);
+
+		// 크리티컬 여부를 SetByCaller로 전달 (0.0 = 일반, 1.0 = 크리티컬)
+		SpecHandle.Data->SetSetByCallerMagnitude(
+			FGameplayTag::RequestGameplayTag(FName("Data.IsCritical")),
+			bIsCriticalHit ? 1.0f : 0.0f
+		);
+
 		TargetASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 
-		UE_LOG(LogTemp, Log, TEXT("발사체 데미지 적용: %.0f to %s"), Damage, *Target->GetName());
+		UE_LOG(LogTemp, Log, TEXT("발사체 데미지 적용: %.0f to %s (크리티컬: %s)"),
+			Damage, *Target->GetName(), bIsCriticalHit ? TEXT("예") : TEXT("아니오"));
 
 		return true;
 	}

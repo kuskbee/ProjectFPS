@@ -96,4 +96,12 @@ public:
 
 	// GameplayEffect 적용 후 호출 (Effect 제거 등 로직 처리)
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
+
+protected:
+	/** 데미지 숫자 위젯 스폰 (월드 공간에 표시) */
+	void SpawnDamageNumberWidget(const FGameplayEffectModCallbackData& Data);
+
+public:
+	/** 데미지 숫자 위젯 클래스 (Blueprint에서 설정 가능, FPSCharacter에서 초기화) */
+	static TSubclassOf<class UDamageNumberWidget> DamageNumberWidgetClass;
 };

@@ -23,6 +23,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "FPS/Items/WeaponItemData.h"
 #include "Blueprint/UserWidget.h"
+#include "UI/DamageNumberWidget.h"
 
 // 기본값 설정
 AFPSCharacter::AFPSCharacter()
@@ -95,6 +96,11 @@ void AFPSCharacter::BeginPlay()
 		DefaultThirdPersonAnimClass = GetMesh()->GetAnimClass();
 	}
 
+	// DamageNumberWidget 클래스 설정 (CharacterAttributeSet의 static 변수)
+	if (DamageNumberWidgetClass)
+	{
+		UCharacterAttributeSet::DamageNumberWidgetClass = DamageNumberWidgetClass;
+	}
 
 	if (AbilitySystemComponent)
 	{
