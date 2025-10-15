@@ -15,10 +15,12 @@ public class ProjectFPS : ModuleRules
 			"InputCore",
 			"EnhancedInput",
 			"AIModule",
+			"NavigationSystem",
 			"StateTreeModule",
 			"GameplayStateTreeModule",
 			"UMG",
 			"Slate",
+			"SlateCore",
             "GameplayAbilities",
             "GameplayTags",
             "GameplayTasks",
@@ -34,8 +36,12 @@ public class ProjectFPS : ModuleRules
 			"ProjectFPS/Variant_Shooter",
 			"ProjectFPS/Variant_Shooter/AI",
 			"ProjectFPS/Variant_Shooter/UI",
-			"ProjectFPS/Variant_Shooter/Weapons"
-		});
+			"ProjectFPS/Variant_Shooter/Weapons",
+            "ProjectFPS/FPS",
+            "ProjectFPS/FPS/AI",
+            "ProjectFPS/FPS/Weapons",
+            "ProjectFPS/FPS/UI"
+        });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
