@@ -119,7 +119,7 @@ bool AFPSEnemyAIController::CanSeePlayer()
 	if (AngleDegrees > SightAngle)
 		return false;
 
-	// 라인 트레이스로 장애물 체크
+	// 라인 트레이스로 장애물 체크 (벽, 바닥 등 모든 Static 물체 감지)
 	FHitResult HitResult;
 	FVector Start = ControlledEnemy->GetActorLocation();
 	FVector End = TargetPawn->GetActorLocation();
@@ -127,11 +127,12 @@ bool AFPSEnemyAIController::CanSeePlayer()
 	FCollisionQueryParams QueryParams;
 	QueryParams.AddIgnoredActor(ControlledEnemy);
 
+	// ECC_Camera: WorldStatic, WorldDynamic 모두 차단
 	bool bHit = GetWorld()->LineTraceSingleByChannel(
-		HitResult, 
-		Start, 
-		End, 
-		ECC_Visibility, 
+		HitResult,
+		Start,
+		End,
+		ECC_Camera,  // WorldStatic(벽) + WorldDynamic 모두 감지
 		QueryParams
 	);
 
@@ -220,7 +221,14 @@ void AFPSEnemyAIController::HandleAttackState()
 		return;
 	}
 
-	// 공격 실행 (현재는 로그만)
+	// ⭐ 시야에 있는지 확인 (벽 뚫고 공격 방지!)
+	if (!CanSeePlayer())
+	{
+		SetAIState(EAIState::Chase);
+		return;
+	}
+
+	// 공격 실행
 	StartAttacking();
 }
 

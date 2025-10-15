@@ -19,15 +19,17 @@ AFPSProjectile::AFPSProjectile()
 	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("SphereComponent"));
 	CollisionComponent->InitSphereRadius(15.0f);
 
-	// Collision 설정: 모두 Ignore, Pawn만 Overlap
+	// Collision 설정: 모두 Ignore, Pawn/WorldStatic은 Overlap
 	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CollisionComponent->SetCollisionObjectType(ECollisionChannel::ECC_WorldDynamic);
 	CollisionComponent->SetCollisionResponseToAllChannels(ECollisionResponse::ECR_Ignore);
 	CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_Pawn, ECollisionResponse::ECR_Overlap);
+	CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldStatic, ECollisionResponse::ECR_Overlap);
 	CollisionComponent->SetCollisionResponseToChannel(ECollisionChannel::ECC_WorldDynamic, ECollisionResponse::ECR_Overlap);
 	CollisionComponent->SetGenerateOverlapEvents(true);
 
-	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &AFPSProjectile::OnHit);
+	// ⭐ OnComponentBeginOverlap 이벤트 바인딩
+	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &AFPSProjectile::OnComponentBeginOverlap);
 	SetRootComponent(CollisionComponent);
 
 	// Projectile Mesh 생성
@@ -42,6 +44,9 @@ AFPSProjectile::AFPSProjectile()
 	ProjectileMovement->bRotationFollowsVelocity = true;
 	ProjectileMovement->bShouldBounce = false;
 	ProjectileMovement->ProjectileGravityScale = 0.0f;
+
+	// ⭐ 빠른 발사체를 위한 Sweep 활성화 (프레임 사이 충돌 감지)
+	ProjectileMovement->bSweepCollision = true;
 }
 
 void AFPSProjectile::BeginPlay()
@@ -52,16 +57,32 @@ void AFPSProjectile::BeginPlay()
 	GetWorld()->GetTimerManager().SetTimer(DestroyTimerHandle, this, &AFPSProjectile::DestroyProjectile, 7.0f, false);
 }
 
-void AFPSProjectile::OnHit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+void AFPSProjectile::OnComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 	int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
+	// ⭐ 디버깅: OnComponentBeginOverlap 호출 확인
+	UE_LOG(LogTemp, Log, TEXT("발사체 OnComponentBeginOverlap 호출됨 - 충돌 대상: %s"), OtherActor ? *OtherActor->GetName() : TEXT("NULL"));
+
 	// 자기 자신이나 Instigator는 무시
 	if (OtherActor == this || OtherActor == GetInstigator())
 	{
+		UE_LOG(LogTemp, Log, TEXT("자기 자신 or Instigator 무시"));
 		return;
 	}
 
-	// 데미지 적용
+	// 벽/바닥에 충돌: 이펙트만 재생, 데미지 없음
+	if (!OtherActor->IsA<APawn>())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("발사체가 벽에 충돌: %s"), *OtherActor->GetName());
+		PlayHitEffects(SweepResult.ImpactPoint);
+		OnProjectileHit(SweepResult);
+		Destroy();
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("Pawn에 충돌: %s"), *OtherActor->GetName());
+
+	// Pawn에 충돌: 데미지 적용
 	bool bApply = ApplyDamageToTarget(OtherActor);
 
 	if (bApply)

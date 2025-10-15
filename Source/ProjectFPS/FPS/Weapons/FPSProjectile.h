@@ -95,7 +95,7 @@ public:
 
 	/** 충돌 시 호출되는 함수 (OnComponentBeginOverlap에 바인딩) */
 	UFUNCTION()
-	void OnHit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	void OnComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	/** 데미지 적용 함수 */

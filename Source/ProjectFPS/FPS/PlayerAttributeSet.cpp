@@ -7,9 +7,9 @@
 UPlayerAttributeSet::UPlayerAttributeSet()
 {
 	// Default values for Player Attributes
-	// 테스트용: 시작 시 스킬 포인트 5개 지급
-	SkillPoint.SetBaseValue(5.0f);
-	SkillPoint.SetCurrentValue(5.0f);
+	// 시작 시 스킬 포인트 3개 지급
+	SkillPoint.SetBaseValue(3.0f);
+	SkillPoint.SetCurrentValue(3.0f);
 
 	// Critical 초기값 설정
 	CritChance.SetBaseValue(0.05f);      // 기본 크리티컬 확률 5%
