@@ -12,6 +12,8 @@
 #include "FPS/PlayerAttributeSet.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/SceneComponent.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 #include "Animation/AnimInstance.h"
 #include "GameFramework/Pawn.h"
 #include "Engine/World.h"
@@ -22,7 +24,7 @@
 
 AFPSWeapon::AFPSWeapon()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;  // Tick 활성화 (부유/회전 효과)
 
 	// 루트 컴포넌트 생성
 	RootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
@@ -48,6 +50,18 @@ AFPSWeapon::AFPSWeapon()
 	// 기본적으로 픽업 트리거 비활성화 (무기가 스폰될 때는 보통 장착 상태)
 	PickupTrigger->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
+	// Niagara 파티클 이펙트 생성
+	PickupEffect = CreateDefaultSubobject<UNiagaraComponent>(TEXT("PickupEffect"));
+	PickupEffect->SetupAttachment(RootComponent);
+	PickupEffect->SetAutoActivate(false);  // 기본적으로 비활성화
+
+	// Niagara System 하드코딩 로드
+	UNiagaraSystem* NiagaraAsset = Cast<UNiagaraSystem>(StaticLoadObject(UNiagaraSystem::StaticClass(), nullptr, TEXT("/Game/Basic_VFX/Niagara/NS_Basic_1.NS_Basic_1")));
+	if (NiagaraAsset)
+	{
+		PickupEffect->SetAsset(NiagaraAsset);
+	}
+
 	// 기본값 초기화 (WeaponItemData에 없는 것들만)
 	MuzzleOffset = 10.0f;
 	ShotLoudness = 1.0f;
@@ -61,6 +75,15 @@ AFPSWeapon::AFPSWeapon()
 void AFPSWeapon::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 초기 Z 위치 저장 (부유 효과용)
+	InitialZ = GetActorLocation().Z;
+
+	// 드롭 상태면 파티클 활성화
+	if (bIsDropped && PickupEffect)
+	{
+		PickupEffect->Activate();
+	}
 
 	// 소유자의 파괴 델리게이트에 구독
 	if (GetOwner())
@@ -94,6 +117,30 @@ void AFPSWeapon::EndPlay(EEndPlayReason::Type EndPlayReason)
 	}
 
 	Super::EndPlay(EndPlayReason);
+}
+
+void AFPSWeapon::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+
+	// 드롭된 상태일 때만 효과 적용
+	if (!bIsDropped)
+	{
+		return;
+	}
+
+	// 1. 회전 효과 (Y축 기준 회전)
+	FRotator CurrentRotation = GetActorRotation();
+	CurrentRotation.Yaw += RotationSpeed * DeltaTime;
+	SetActorRotation(CurrentRotation);
+
+	// 2. 부유 효과 (Z축 기준 사인파 움직임)
+	TimeAccumulator += DeltaTime * FloatSpeed;
+	float NewZ = InitialZ + FMath::Sin(TimeAccumulator) * FloatAmplitude;
+
+	FVector CurrentLocation = GetActorLocation();
+	CurrentLocation.Z = NewZ;
+	SetActorLocation(CurrentLocation);
 }
 
 void AFPSWeapon::OnOwnerDestroyed(AActor* DestroyedActor)
@@ -601,6 +648,19 @@ void AFPSWeapon::SetDropped(bool bNewDropped)
 		{
 			PickupTrigger->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 			UE_LOG(LogTemp, Log, TEXT("무기 %s: 장착 상태로 변경, 픽업 트리거 비활성화"), *GetName());
+		}
+	}
+
+	// 파티클 이펙트 제어
+	if (PickupEffect)
+	{
+		if (bIsDropped)
+		{
+			PickupEffect->Activate();
+		}
+		else
+		{
+			PickupEffect->Deactivate();
 		}
 	}
 }

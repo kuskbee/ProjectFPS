@@ -70,6 +70,13 @@ void AFPSProjectile::OnComponentBeginOverlap(UPrimitiveComponent* OverlappedComp
 		return;
 	}
 
+	// Owner에 속한 충돌체는 무시 (ex.방어막 안에서 발사)
+	if (IsHitObjectFromOwner(OtherActor))
+	{
+		UE_LOG(LogTemp, Verbose, TEXT("방어막: Owner 발사체 통과"));
+		return;
+	}
+
 	// 벽/바닥에 충돌: 이펙트만 재생, 데미지 없음
 	if (!OtherActor->IsA<APawn>())
 	{
@@ -163,4 +170,18 @@ void AFPSProjectile::PlayHitEffects(const FVector& HitLocation)
 void AFPSProjectile::DestroyProjectile()
 {
 	Destroy();
+}
+
+bool AFPSProjectile::IsHitObjectFromOwner(AActor* HitObject)
+{
+	if (!HitObject || !GetInstigator())
+	{
+		return false;
+	}
+
+	// 발사체의 Instigator가 방어막 Owner와 같으면 내부 발사
+	APawn* ProjectileInstigator = GetInstigator();
+	APawn* HitObjectOwner = Cast<APawn>(HitObject->GetOwner());
+
+	return (ProjectileInstigator == HitObjectOwner);
 }

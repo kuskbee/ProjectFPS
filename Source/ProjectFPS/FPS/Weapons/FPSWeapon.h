@@ -17,6 +17,7 @@ class UAnimMontage;
 class UAnimInstance;
 class UGameplayAbility;
 class UPickupTriggerComponent;
+class UNiagaraComponent;
 
 /**
  * GAS 통합 FPS 무기를 위한 기본 클래스
@@ -40,6 +41,10 @@ class PROJECTFPS_API AFPSWeapon : public AActor, public IPickupable
 	/** 픽업 감지용 트리거 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UPickupTriggerComponent> PickupTrigger;
+
+	/** Niagara 파티클 이펙트 (드롭 상태일 때 활성화) */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNiagaraComponent> PickupEffect;
 
 protected:
 
@@ -127,6 +132,9 @@ protected:
 
 	/** 게임플레이 정리 */
 	virtual void EndPlay(EEndPlayReason::Type EndPlayReason) override;
+
+	/** 매 프레임 업데이트 (부유/회전 효과) */
+	virtual void Tick(float DeltaTime) override;
 
 protected:
 
@@ -263,4 +271,26 @@ protected:
 	/** 무기가 월드에 드롭된 상태인지 (픽업 가능한지) */
 	UPROPERTY(BlueprintReadOnly, Category="Pickup")
 	bool bIsDropped = false;
+
+	// ========================================
+	// 부유/회전 효과 (드롭 상태일 때)
+	// ========================================
+
+	/** 회전 속도 (도/초) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Effects")
+	float RotationSpeed = 90.0f;
+
+	/** 부유 속도 (주기) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Effects")
+	float FloatSpeed = 2.0f;
+
+	/** 부유 높이 (위아래 범위) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Pickup Effects")
+	float FloatAmplitude = 20.0f;
+
+	/** 시간 누적 (부유 계산용) */
+	float TimeAccumulator = 0.0f;
+
+	/** 초기 Z 위치 */
+	float InitialZ = 0.0f;
 };

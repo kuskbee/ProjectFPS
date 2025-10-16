@@ -114,4 +114,7 @@ protected:
 
 	/** 발사체 자동 파괴 함수 */
 	void DestroyProjectile();
+
+	/** Owner에 속한 충돌체인지 체크 **/
+	bool IsHitObjectFromOwner(AActor* HitObject);
 };

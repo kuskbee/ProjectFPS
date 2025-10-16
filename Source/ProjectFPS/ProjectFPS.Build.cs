@@ -24,7 +24,8 @@ public class ProjectFPS : ModuleRules
             "GameplayAbilities",
             "GameplayTags",
             "GameplayTasks",
-            "Networking"
+            "Networking",
+			"Niagara"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { });

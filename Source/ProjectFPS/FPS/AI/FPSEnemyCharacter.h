@@ -7,6 +7,8 @@
 #include "FPS/Weapons/FPSWeaponHolder.h"
 #include "FPSEnemyCharacter.generated.h"
 
+class UItemDropTableDataAsset;
+
 class AFPSWeapon;
 class UAnimMontage;
 class UWeaponItemData;
@@ -50,6 +52,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Rewards")
 	TSubclassOf<class UGameplayEffect> SkillPointGainEffect;
 
+	/** 아이템 드롭 테이블 DataAsset */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Rewards")
+	TObjectPtr<UItemDropTableDataAsset> ItemDropTableAsset;
+
 	/** AI 전용: 기본 무기 데이터 (WeaponItemData 기반) */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "AI Weapon")
 	TSubclassOf<UWeaponItemData> DefaultWeaponData;
@@ -75,6 +81,9 @@ public:
 protected:
 	// 사망 처리 (AI 전용)
 	void Die();
+
+	/** 아이템 드롭 처리 */
+	void DropItems();
 
 	UFUNCTION()
 	void OnDeathDestroy();
