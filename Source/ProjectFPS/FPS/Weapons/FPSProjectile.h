@@ -95,7 +95,7 @@ public:
 
 	/** 충돌 시 호출되는 함수 (OnComponentBeginOverlap에 바인딩) */
 	UFUNCTION()
-	void OnHit(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
+	void OnComponentBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp,
 		int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
 	/** 데미지 적용 함수 */
@@ -114,4 +114,7 @@ protected:
 
 	/** 발사체 자동 파괴 함수 */
 	void DestroyProjectile();
+
+	/** Owner에 속한 충돌체인지 체크 **/
+	bool IsHitObjectFromOwner(AActor* HitObject);
 };

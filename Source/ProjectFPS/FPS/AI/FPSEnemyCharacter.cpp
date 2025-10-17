@@ -5,6 +5,9 @@
 #include "FPS/Weapons/FPSWeapon.h"
 #include "FPS/Components/WeaponSlotComponent.h"
 #include "FPS/Items/WeaponItemData.h"
+#include "FPS/Items/BaseItemData.h"
+#include "FPS/ItemDropTableDataAsset.h"
+#include "FPS/Actors/PickupItemActor.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/SkeletalMeshComponent.h"
@@ -149,8 +152,103 @@ void AFPSEnemyCharacter::OnPlayerDeath()
 		}
 	}*/
 
+	// 아이템 드롭
+	DropItems();
+
 	// 일정 시간 후 파괴
 	GetWorld()->GetTimerManager().SetTimer(DeathTimer, this, &AFPSEnemyCharacter::OnDeathDestroy, DeathDestroyDelay, false);
+}
+
+void AFPSEnemyCharacter::DropItems()
+{
+	// ItemDropTableAsset이 설정되지 않은 경우 리턴
+	if (!ItemDropTableAsset)
+	{
+		UE_LOG(LogTemp, Log, TEXT("ItemDropTableAsset이 설정되지 않음 - 아이템 드롭 없음"));
+		return;
+	}
+
+	// 드롭 테이블에서 아이템 추첨
+	TArray<UBaseItemData*> DroppedItems = ItemDropTableAsset->RollDrops();
+
+	if (DroppedItems.Num() == 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("적이 아이템을 드롭하지 않음"));
+		return;
+	}
+
+	// 각 아이템을 월드에 스폰
+	FVector DropLocation = GetActorLocation();
+	FRotator DropRotation = GetActorRotation();
+	float SpawnOffset = 0.0f;  // 여러 아이템 간격
+
+	for (UBaseItemData* ItemData : DroppedItems)
+	{
+		if (!ItemData)
+		{
+			continue;
+		}
+
+		// 아이템 타입에 따라 다른 액터 생성
+		if (ItemData->ItemType == EItemType::Weapon)
+		{
+			// 무기는 AFPSWeapon 액터 생성
+			UWeaponItemData* WeaponData = Cast<UWeaponItemData>(ItemData);
+			if (WeaponData && WeaponData->WeaponClass)
+			{
+				FVector SpawnLoc = DropLocation + FVector(SpawnOffset, 0, 0);
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+				AFPSWeapon* DroppedWeapon = GetWorld()->SpawnActor<AFPSWeapon>(
+					WeaponData->WeaponClass,
+					SpawnLoc,
+					DropRotation,
+					SpawnParams
+				);
+
+				if (DroppedWeapon)
+				{
+					DroppedWeapon->SetWeaponItemData(WeaponData);
+					DroppedWeapon->SetDropped(true);
+					UE_LOG(LogTemp, Log, TEXT("무기 드롭: %s"), *WeaponData->GetItemName());
+				}
+
+				SpawnOffset += 50.0f;
+			}
+		}
+		else
+		{
+			// 소모품/기타 아이템은 PickupItemActor 생성
+			if (ItemData->WorldStaticMesh || ItemData->WorldSkeletalMesh)
+			{
+				FVector SpawnLoc = DropLocation + FVector(SpawnOffset, 0, 0);
+				FActorSpawnParameters SpawnParams;
+				SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+				APickupItemActor* DroppedItem = GetWorld()->SpawnActor<APickupItemActor>(
+					APickupItemActor::StaticClass(),
+					SpawnLoc,
+					DropRotation,
+					SpawnParams
+				);
+
+				if (DroppedItem)
+				{
+					DroppedItem->SetItemData(ItemData);
+					DroppedItem->SetDropped(true);
+
+					// 포션 크기 조정 (기본 크기가 너무 큼)
+					DroppedItem->SetActorScale3D(FVector(0.1f, 0.1f, 0.1f));
+
+					UE_LOG(LogTemp, Log, TEXT("아이템 드롭: %s (개수: %d)"),
+						*ItemData->GetItemName(), ItemData->CurrentStackSize);
+				}
+
+				SpawnOffset += 50.0f;
+			}
+		}
+	}
 }
 
 void AFPSEnemyCharacter::Die()

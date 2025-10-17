@@ -22,6 +22,9 @@ UGameplayEffect_Cooldown::UGameplayEffect_Cooldown()
 
 	AssetTagsComp->SetAndApplyAssetTagChanges(AssetTags);
 
+	// ⭐ GEComponents에 등록 (Ensure 에러 수정!)
+	GEComponents.Add(AssetTagsComp);
+
 	// 스택 정책: 쿨다운은 스택 안됨
 	StackingType = EGameplayEffectStackingType::None;
 }
