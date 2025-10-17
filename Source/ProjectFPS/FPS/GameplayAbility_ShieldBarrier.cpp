@@ -28,11 +28,8 @@ void UGameplayAbility_ShieldBarrier::ActivateAbility(const FGameplayAbilitySpecH
 		return;
 	}
 
-	// Cost 수동 적용 (있다면)
+	// Cost 수동 적용 (있다면) & 내부에서 쿨다운 적용
 	CommitExecute(Handle, ActorInfo, ActivationInfo);
-
-	// ⭐ 쿨다운 수동 적용 (EndAbility()에서 제거되지 않도록!)
-	ApplyCooldown(Handle, ActorInfo, ActivationInfo);
 
 	// 방어막 HP 초기화
 	CurrentBarrierHealth = BarrierHealth;
